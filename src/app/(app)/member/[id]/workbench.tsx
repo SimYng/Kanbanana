@@ -217,7 +217,7 @@ export function MemberWorkbench({
         }
       >
         {doing.length === 0 ? (
-          <EmptyHint>没有正在进行的任务。从下方"待办"选一个开始做。</EmptyHint>
+          <EmptyHint>手头很干净 🍌 从下方"待办"挑一个开始蕉。</EmptyHint>
         ) : (
           <SortableTaskList tasks={doing} onReorder={handleReorder}>
             <div className="space-y-2">
@@ -241,7 +241,7 @@ export function MemberWorkbench({
         hint="顶部 = 接下来要做 · 拖动卡片调整顺序"
       >
         {todo.length === 0 ? (
-          <EmptyHint>待办池已清空。</EmptyHint>
+          <EmptyHint>没人蕉代你新活，今天可以早点下班 🎉</EmptyHint>
         ) : (
           <SortableTaskList tasks={todo} onReorder={handleReorder}>
             <div className="space-y-2">

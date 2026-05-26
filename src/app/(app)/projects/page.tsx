@@ -69,7 +69,7 @@ export default async function ProjectsListPage() {
 
       {active.length === 0 && archived.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-16 text-center">
-          <p className="text-sm text-muted-foreground">还没有项目。</p>
+          <p className="text-sm text-muted-foreground">还没有蕉给你的项目 🍌</p>
           {isAdmin ? (
             <NewProjectDialog />
           ) : (
@@ -116,7 +116,7 @@ function ProjectGrid({
   if (items.length === 0) {
     return (
       <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-        没有项目
+        这里空空如也
       </div>
     );
   }
