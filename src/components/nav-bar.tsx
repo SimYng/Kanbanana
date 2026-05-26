@@ -78,7 +78,7 @@ export function NavBar() {
                   <MemberAvatar name={session.user.name ?? "?"} className="h-6 w-6" />
                   <span className="text-sm">{session.user.name}</span>
                   {session.user.role === "admin" && (
-                    <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                    <span className="rounded border border-primary/50 bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-foreground">
                       管理员
                     </span>
                   )}

@@ -3,30 +3,36 @@
 @tailwind utilities;
 
 @layer base {
+  /* 蕉办配色：
+     - primary 用饱满的香蕉黄，仅出现在按钮/焦点/品牌点缀等"操作色"位置
+     - 背景几乎纯白，仅注入极少量暖色（H=48 hint of warmth），与黄色主色温度呼应
+     - card 保持纯白，与微暖背景形成微妙层次
+     - 中性色（border/muted/accent）同样偏暖
+     - success 绿色保留，正好像香蕉蒂，用作"完成"高亮 */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    --background: 48 60% 99%;
+    --foreground: 30 15% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card-foreground: 30 15% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 211 74% 63%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
+    --popover-foreground: 30 15% 12%;
+    --primary: 45 95% 51%;
+    --primary-foreground: 30 30% 10%;
+    --secondary: 45 40% 95%;
+    --secondary-foreground: 30 15% 12%;
+    --muted: 45 30% 96%;
+    --muted-foreground: 30 8% 42%;
+    --accent: 45 55% 92%;
+    --accent-foreground: 30 15% 12%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 211 74% 63%;
+    --border: 45 25% 88%;
+    --input: 45 25% 88%;
+    --ring: 45 95% 51%;
     --radius: 0.5rem;
 
-    --warn: 34 92% 52%;
-    --success: 142 70% 38%;
+    --warn: 28 92% 52%;
+    --success: 142 65% 38%;
     --info: 199 89% 48%;
   }
 
@@ -37,8 +43,8 @@
     --card-foreground: 0 0% 92%;
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 92%;
-    --primary: 211 74% 63%;
-    --primary-foreground: 0 0% 9%;
+    --primary: 45 88% 58%;
+    --primary-foreground: 30 30% 10%;
     --secondary: 0 0% 14%;
     --secondary-foreground: 0 0% 92%;
     --muted: 0 0% 14%;
@@ -49,9 +55,9 @@
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 20%;
     --input: 0 0% 18%;
-    --ring: 211 74% 63%;
+    --ring: 45 88% 58%;
 
-    --warn: 34 92% 58%;
+    --warn: 28 92% 58%;
     --success: 142 60% 50%;
     --info: 199 89% 60%;
   }
