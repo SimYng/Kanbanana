@@ -1,0 +1,257 @@
+import Link from "next/link";
+import { ArrowRight, AlertTriangle } from "lucide-react";
+import { prisma } from "@/lib/db";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { MemberAvatar } from "@/components/member-avatar";
+import { PriorityBadge } from "@/components/priority-badge";
+import { ProjectPill } from "@/components/project-pill";
+import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
+import { WORKLOAD_CAPACITY, type ProjectColor } from "@/lib/types";
+import { PROJECT_COLOR_HEX } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+
+export default async function TeamPage() {
+  const [members, allTasks, projects] = await Promise.all([
+    prisma.user.findMany({
+      where: { role: "member" },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.task.findMany({
+      include: TASK_INCLUDE,
+      orderBy: { sortIndex: "asc" },
+    }),
+    prisma.project.findMany({ orderBy: { createdAt: "asc" } }),
+  ]);
+
+  const tasks = allTasks.map(serializeTask);
+
+  const memberRows = members.map((m) => {
+    const mine = tasks.filter((t) => t.assigneeId === m.id);
+    const open = mine.filter((t) => t.status !== "done");
+    return {
+      member: m,
+      doingCount: open.filter((t) => t.status === "doing").length,
+      todoCount: open.filter((t) => t.status === "todo").length,
+      blockedCount: open.filter((t) => t.status === "blocked").length,
+      focused: open.filter((t) => t.focusedToday).length,
+      total: open.length,
+    };
+  });
+
+  const blockedTasks = tasks.filter((t) => t.status === "blocked");
+  const overloaded = memberRows.filter((w) => w.total > WORKLOAD_CAPACITY).length;
+  const focusedTotal = memberRows.reduce((s, w) => s + w.focused, 0);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">团队总览</h1>
+        <p className="text-sm text-muted-foreground">
+          掌握全局 → 点「排活」进入成员工作台拖拽排序
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="团队成员" value={members.length} />
+        <StatCard label="今日聚焦总数" value={focusedTotal} tone="info" />
+        <StatCard
+          label="阻塞任务"
+          value={blockedTasks.length}
+          tone={blockedTasks.length ? "warn" : undefined}
+        />
+        <StatCard
+          label="工作量超载"
+          value={overloaded}
+          tone={overloaded ? "destructive" : "success"}
+        />
+      </div>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">成员手头工作量</h2>
+        <p className="text-sm text-muted-foreground">
+          按未完成任务数聚合 · 建议每人 ≤ {WORKLOAD_CAPACITY} 个
+        </p>
+        <div className="space-y-2">
+          {memberRows.map((w) => {
+            const over = w.total > WORKLOAD_CAPACITY;
+            const total = Math.max(WORKLOAD_CAPACITY, w.total);
+            return (
+              <Card key={w.member.id}>
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex items-center gap-3">
+                    <MemberAvatar name={w.member.name} />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">{w.member.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        进行 {w.doingCount} · 待办 {w.todoCount} · 阻塞 {w.blockedCount}
+                        {w.focused > 0 && ` · 今日聚焦 ${w.focused}`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-sm font-medium ${
+                          over ? "text-warn" : "text-muted-foreground"
+                        }`}
+                      >
+                        {w.total} / {WORKLOAD_CAPACITY}
+                      </span>
+                      {over && <Badge variant="warn">超载</Badge>}
+                      {w.blockedCount > 0 && (
+                        <Badge variant="warn" className="font-normal">
+                          阻塞 ×{w.blockedCount}
+                        </Badge>
+                      )}
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/member/${w.member.id}`}>
+                          排活
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="bg-info transition-all"
+                      style={{ width: `${(w.doingCount / total) * 100}%` }}
+                    />
+                    <div
+                      className="bg-muted-foreground/50 transition-all"
+                      style={{ width: `${(w.todoCount / total) * 100}%` }}
+                    />
+                    <div
+                      className="bg-warn transition-all"
+                      style={{ width: `${(w.blockedCount / total) * 100}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+
+      {blockedTasks.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-warn" />
+            <h2 className="text-lg font-semibold">团队阻塞看板</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            所有阻塞中的任务集中展示，方便每日晨会快速过一遍
+          </p>
+          <div className="overflow-hidden rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 font-medium">任务</th>
+                  <th className="px-3 py-2 font-medium">负责人</th>
+                  <th className="px-3 py-2 font-medium">项目</th>
+                  <th className="px-3 py-2 font-medium">优先级</th>
+                  <th className="px-3 py-2 font-medium">阻塞原因</th>
+                </tr>
+              </thead>
+              <tbody>
+                {blockedTasks.map((t) => (
+                  <tr key={t.id} className="border-t bg-warn/5">
+                    <td className="px-3 py-2 font-medium">{t.title}</td>
+                    <td className="px-3 py-2">{t.assignee?.name ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <ProjectPill name={t.project.name} color={t.project.color} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <PriorityBadge priority={t.priority} short />
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {t.blockedReason ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">项目进度</h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          {projects.map((p) => {
+            const pt = tasks.filter((t) => t.projectId === p.id);
+            const doneCount = pt.filter((t) => t.status === "done").length;
+            const blockedCount = pt.filter((t) => t.status === "blocked").length;
+            const pct = pt.length === 0 ? 0 : Math.round((doneCount / pt.length) * 100);
+            return (
+              <Card key={p.id}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <Link href={`/project/${p.id}`} className="flex items-center gap-2 hover:underline">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: PROJECT_COLOR_HEX[p.color as ProjectColor] }}
+                      />
+                      {p.name}
+                    </Link>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {doneCount}/{pt.length}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-0">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full transition-all"
+                      style={{
+                        width: `${pct}%`,
+                        background: PROJECT_COLOR_HEX[p.color as ProjectColor],
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>完成度 {pct}%</span>
+                    {blockedCount > 0 && (
+                      <Badge variant="warn" className="font-normal">
+                        阻塞 ×{blockedCount}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "info" | "warn" | "success" | "destructive";
+}) {
+  const toneClass =
+    tone === "info"
+      ? "text-info"
+      : tone === "warn"
+        ? "text-warn"
+        : tone === "success"
+          ? "text-success"
+          : tone === "destructive"
+            ? "text-destructive"
+            : "text-foreground";
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className={`text-2xl font-semibold tabular-nums ${toneClass}`}>{value}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+      </CardContent>
+    </Card>
+  );
+}

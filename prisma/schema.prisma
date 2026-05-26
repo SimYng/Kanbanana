@@ -1,0 +1,85 @@
+// StackBoard 数据模型
+// 设计原则：
+//  - 任务的"个人执行顺序"用 sortIndex（float）维护，拖拽时只更新被移动项
+//  - priority 字段独立于 sortIndex，反映客观重要性（P0/P1/P2/P3）
+//  - 任务可以挂多个语雀文档链接（YuqueLink 表）
+//  - User.role 预留 admin/member，便于未来开放给员工时做权限分级
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("member") // "admin" | "member"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasksAssigned Task[]  @relation("Assignee")
+  tasksCreated  Task[]  @relation("Creator")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("blue") // "blue" | "purple" | "green" | "orange" | "pink" | "yellow" | "gray"
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[]
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?  // markdown
+  projectId      String
+  assigneeId     String?
+  creatorId      String
+
+  // "todo" | "doing" | "blocked" | "done"
+  status         String   @default("todo")
+  // "P0" | "P1" | "P2" | "P3"
+  priority       String   @default("P2")
+
+  // 个人执行顺序（浮点排序键）。拖拽时设为相邻两项的均值。
+  // 作用域可视为"该 assignee 的全部任务"，跨视图共享一份顺序。
+  sortIndex      Float    @default(0)
+
+  focusedToday   Boolean  @default(false)
+  blockedReason  String?
+  dueDate        DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee  User?      @relation("Assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creator   User       @relation("Creator", fields: [creatorId], references: [id])
+  yuqueLinks YuqueLink[]
+
+  @@index([assigneeId, sortIndex])
+  @@index([projectId, status])
+  @@index([status])
+}
+
+model YuqueLink {
+  id        String   @id @default(cuid())
+  taskId    String
+  url       String
+  title     String?  // 可缓存语雀文档标题
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
