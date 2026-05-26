@@ -6,9 +6,23 @@
 
 ## 1. 项目快照
 
-StackBoard，给 ≤ 10 人小团队的轻量项目管理工具。**单体 Next.js 14 App Router 应用**，前后端在同一仓库，Prisma + SQLite 落库，Docker Compose 一键部署。
+**蕉办 Kanbanana**（包名 `kanbanana`，仓库历史早期叫 `stack-board`/StackBoard，已于 0.2.0 改名）。给 ≤ 10 人小团队的轻量项目管理工具。**单体 Next.js 14 App Router 应用**，前后端在同一仓库，Prisma + SQLite 落库，Docker Compose 一键部署。
 
 核心三视图：**团队总览（/team）→ 成员工作台（/member/[id]）→ 项目看板（/project/[id]）**。
+
+### 品牌约定
+- 中文主名：**蕉办**（谐音「交办」，对应"把任务交给人"）
+- 英文名：**Kanbanana**（Kanban + Banana）
+- 社区梗 / 表情包：**别催了，蕉办**
+- 产品 slogan：**任务别乱飞，先上蕉办**
+- **代码层一律英文** —— 包名 / 类名 / API 路径 / 字段名都用 `kanbanana` 或英文术语，**不要在标识符里塞中文**
+- **UI 文案分级** —— 核心动作 / 空状态 / Toast 可以适度玩梗（蕉了 / 待蕉 / 蕉一个）；错误提示 / 权限提示 / 表单字段保持严肃
+
+### 品牌资源位置
+- Next.js 自动注入图标：`src/app/{icon,apple-icon,opengraph-image}.png`
+- 应用内 UI 用 logo：`public/brand/logo-mark.png`（256）+ `logo-mark@2x.png`（512）
+- 仓库展示用：`docs/brand/banner.png`
+- 重新生成所有尺寸：`powershell -ExecutionPolicy Bypass -File scripts\process-logo.ps1`
 
 ## 2. 常用命令（Windows 友好）
 
@@ -98,7 +112,7 @@ src/lib/
 
 | 坑 | 表现 | 正确做法 |
 |---|---|---|
-| **SQLite path 相对解析** | `DATABASE_URL=file:./prisma/dev.db` 在 Prisma 里相对 `schema.prisma` 解析，会生成 `prisma/prisma/dev.db` | `.env` 用 `file:./dev.db`，Docker 用绝对路径 `file:/app/data/stack-board.db` |
+| **SQLite path 相对解析** | `DATABASE_URL=file:./prisma/dev.db` 在 Prisma 里相对 `schema.prisma` 解析，会生成 `prisma/prisma/dev.db` | `.env` 用 `file:./dev.db`，Docker 用绝对路径 `file:/app/data/kanbanana.db` |
 | **pnpm 不跑 Prisma postinstall** | 缺少生成的 Prisma Client | `package.json` 的 `pnpm.onlyBuiltDependencies` 显式 allow `@prisma/client` 和 `prisma` |
 | **Windows + Next standalone EPERM** | 本地 `pnpm build` 因符号链接失败 | `next.config.mjs` 里 `output` 设为 `process.env.NEXT_BUILD_STANDALONE === "1" ? "standalone" : undefined`，仅 Docker 构建时启用 |
 | **解除阻塞后阻塞原因残留** | 阻塞状态切走后 `blockedReason` 还在数据库 | `handleAction` 切到非 blocked 时一律 `payload.blockedReason = null` |
@@ -160,7 +174,7 @@ src/lib/
 ## 10. 文档维护责任
 
 更新代码时**同步检查并更新**以下文件：
-- `README.md`：用户向变更（部署、命令、新功能介绍）—— 注意现有 README 第 6 行仍提及"今日聚焦"，**这是过时表述**，未来涉及该段时一并修正
+- `README.md`：用户向变更（部署、命令、新功能介绍、品牌资源说明）
 - `AGENTS.md`（本文件）：架构决策、踩坑记录、约定变化
 
 不要把 AGENTS.md 当成 changelog 来写，**只记录会指导未来工作的内容**。
