@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Users, FolderKanban, LogOut } from "lucide-react";
+import { Users, FolderKanban, LogOut, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MemberAvatar } from "@/components/member-avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -23,9 +23,15 @@ const tabs = [
   { href: "/projects", label: "项目看板", icon: FolderKanban },
 ];
 
+const adminTabs = [
+  { href: "/members", label: "成员管理", icon: UserCog },
+];
+
 export function NavBar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
+  const visibleTabs = isAdmin ? [...tabs, ...adminTabs] : tabs;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
@@ -47,7 +53,7 @@ export function NavBar() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          {tabs.map((tab) => {
+          {visibleTabs.map((tab) => {
             const active =
               pathname === tab.href || pathname?.startsWith(`${tab.href}/`);
             const Icon = tab.icon;

@@ -101,7 +101,17 @@ src/lib/
 ### 权限分级
 - 通过 `requireAdmin()` / `requireUser()` 守卫 API（`src/lib/session.ts`）
 - 前端通过 server component 拉 `getCurrentUser()` 传 `isAdmin` prop 到 client component
-- 目前仅项目 CRUD、新建项目走 admin 限制，未来扩展到任务编辑时遵循同样模式
+- 目前 admin 限制：项目 CRUD、成员 CRUD、`/members` 页面访问
+- 未来扩展到任务编辑权限时遵循同样模式
+
+### 成员管理的硬约束
+所有写操作都要尊重以下不变量（API 层强制，不依赖前端）：
+- **不能删除自己** —— 防止误删导致无人能登录
+- **必须保留至少一个 admin** —— 删除最后一个 admin / 把最后一个 admin 降级，均拒绝（`isLastAdmin()` 助手）
+- **task creator 不能删** —— schema 是 `Task.creator onDelete: Restrict`，Prisma 抛 `P2003` 时翻译为 `HAS_AUTHORED_TASKS`，前端引导用户先迁移任务
+- **task assignee 删了 OK** —— schema 是 `onDelete: SetNull`，任务保留，负责人变空待重新分配
+- **权限分级语义**：admin 可改任何人；普通用户可改自己的 name/password，**不能改自己的 role**（防止自我提权）
+- 错误码统一使用 `EMAIL_TAKEN` / `LAST_ADMIN` / `CANNOT_DELETE_SELF` / `HAS_AUTHORED_TASKS` / `FORBIDDEN`，前端按 code 翻译为友好中文
 
 ### 任务卡片布局两段式
 第一行：拖拽手柄 + 优先级 + 标题（`flex-1 min-w-0 truncate`）+ 操作按钮组（`shrink-0`）
