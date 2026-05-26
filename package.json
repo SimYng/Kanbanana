@@ -1,6 +1,7 @@
 {
-  "name": "stack-board",
-  "version": "0.1.0",
+  "name": "kanbanana",
+  "version": "0.2.0",
+  "description": "蕉办 Kanbanana — 一个有点不正经，但认真帮你管理任务的开源项目看板",
   "private": true,
   "scripts": {
     "dev": "next dev",

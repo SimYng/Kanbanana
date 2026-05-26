@@ -39,3 +39,6 @@ Thumbs.db
 .vercel
 .turbo
 coverage
+
+# brand source files（设计原图，本地保留，仓库只保留处理后的多尺寸版本）
+docs/brand/sources/

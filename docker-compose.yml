@@ -1,14 +1,15 @@
 services:
-  stack-board:
+  kanbanana:
     build: .
-    image: stack-board:latest
-    container_name: stack-board
+    image: kanbanana:latest
+    container_name: kanbanana
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      # 路径相对 prisma/schema.prisma 解析 → 实际落在 /app/data/stack-board.db
-      DATABASE_URL: "file:/app/data/stack-board.db"
+      # 路径相对 prisma/schema.prisma 解析 → 实际落在 /app/data/kanbanana.db
+      # 注意：如果是从 0.1.x（stack-board）升级，entrypoint 会自动迁移旧 db 文件
+      DATABASE_URL: "file:/app/data/kanbanana.db"
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-please-change-me-to-a-random-32-char-secret}"
       NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3000}"
       ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@local}"

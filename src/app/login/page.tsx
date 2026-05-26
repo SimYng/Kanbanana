@@ -1,9 +1,10 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { LayoutGrid, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,11 +41,16 @@ function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="space-y-2 text-center">
-        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <LayoutGrid className="h-5 w-5" />
-        </div>
-        <CardTitle>StackBoard</CardTitle>
-        <CardDescription>小团队项目管理工具</CardDescription>
+        <Image
+          src="/brand/logo-mark.png"
+          alt="蕉办 Kanbanana"
+          width={64}
+          height={64}
+          priority
+          className="mx-auto"
+        />
+        <CardTitle>蕉办 Kanbanana</CardTitle>
+        <CardDescription>任务别乱飞，先上蕉办</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

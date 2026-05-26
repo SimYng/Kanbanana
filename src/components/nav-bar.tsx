@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { LayoutGrid, Users, FolderKanban, LogOut } from "lucide-react";
+import { Users, FolderKanban, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MemberAvatar } from "@/components/member-avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -30,8 +31,19 @@ export function NavBar() {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
       <div className="container flex h-14 items-center gap-6">
         <Link href="/team" className="flex items-center gap-2">
-          <LayoutGrid className="h-5 w-5 text-primary" />
-          <span className="text-base font-semibold tracking-tight">StackBoard</span>
+          <Image
+            src="/brand/logo-mark.png"
+            alt="蕉办 Kanbanana"
+            width={28}
+            height={28}
+            priority
+          />
+          <span className="text-base font-semibold tracking-tight">
+            蕉办
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              Kanbanana
+            </span>
+          </span>
         </Link>
 
         <nav className="flex items-center gap-1">
