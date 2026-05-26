@@ -83,6 +83,8 @@ export function EditMemberDialog({
       const msg = (e as Error).message;
       if (msg === "FORBIDDEN") toast.error("没有权限");
       else if (msg === "LAST_ADMIN") toast.error("至少要保留一个管理员");
+      else if (msg === "INVALID_INPUT")
+        toast.error("输入有误，请检查姓名、密码是否合法");
       else toast.error(`保存失败：${msg}`);
     } finally {
       setBusy(false);

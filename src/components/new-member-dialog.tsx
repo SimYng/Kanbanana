@@ -75,6 +75,8 @@ export function NewMemberDialog() {
       const msg = (e as Error).message;
       if (msg === "EMAIL_TAKEN") toast.error("该邮箱已被使用");
       else if (msg === "FORBIDDEN") toast.error("只有管理员可以创建成员");
+      else if (msg === "INVALID_INPUT")
+        toast.error("输入有误，请检查姓名、邮箱、密码是否合法");
       else toast.error(`创建失败：${msg}`);
     } finally {
       setBusy(false);

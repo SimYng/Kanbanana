@@ -5,9 +5,17 @@ import { requireAdmin, requireUser } from "@/lib/session";
 import { errorJson, handleError, okJson } from "@/lib/api";
 import type { MemberDTO, UserRole } from "@/lib/types";
 
+// 邮箱校验放宽：兼容内网账号如 admin@local（不要求 .tld）
+// 只要符合 a@b 形式即可，避免误伤
+const emailLike = z
+  .string()
+  .min(3)
+  .max(120)
+  .regex(/^[^\s@]+@[^\s@]+$/u, "INVALID_EMAIL");
+
 const CreateInput = z.object({
   name: z.string().min(1).max(50),
-  email: z.string().email().max(120),
+  email: emailLike,
   password: z.string().min(6).max(100),
   role: z.enum(["admin", "member"] as [UserRole, ...UserRole[]]).default("member"),
 });
