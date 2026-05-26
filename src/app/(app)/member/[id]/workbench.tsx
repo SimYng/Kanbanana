@@ -19,6 +19,7 @@ import { TaskCard } from "@/components/task-card";
 import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskDialog } from "@/components/task-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
+import { BlockReasonDialog } from "@/components/block-reason-dialog";
 import { apiFetch } from "@/lib/fetcher";
 import { isToday } from "@/lib/utils";
 import { WIP_LIMIT, type MemberDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
@@ -39,6 +40,7 @@ export function MemberWorkbench({
   const [tasks, setTasks] = useState<TaskDTO[]>(initialTasks);
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
 
   const { doing, todo, blocked, done, doneToday } = useMemo(() => {
     const doneAll = tasks.filter((t) => t.status === "done");
@@ -72,14 +74,36 @@ export function MemberWorkbench({
     taskId: string,
     action: { kind: "status"; value: TaskStatus },
   ) {
+    if (action.value === "blocked") {
+      const target = tasks.find((t) => t.id === taskId);
+      if (target) setBlockingTask(target);
+      return;
+    }
     try {
+      const payload: Record<string, unknown> = { status: action.value };
+      // 切到非阻塞状态时清空原因，避免残留旧文案
+      payload.blockedReason = null;
       const updated = await apiFetch<TaskDTO>(`/api/tasks/${taskId}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: action.value }),
+        body: JSON.stringify(payload),
       });
       patchLocal(updated);
     } catch (e) {
       toast.error((e as Error).message);
+    }
+  }
+
+  async function submitBlock(taskId: string, reason: string) {
+    try {
+      const updated = await apiFetch<TaskDTO>(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "blocked", blockedReason: reason }),
+      });
+      patchLocal(updated);
+      toast.success("已标记为阻塞");
+    } catch (e) {
+      toast.error((e as Error).message);
+      throw e;
     }
   }
 
@@ -291,6 +315,14 @@ export function MemberWorkbench({
           }
         }}
         onDeleted={(id) => setTasks((prev) => prev.filter((t) => t.id !== id))}
+      />
+
+      <BlockReasonDialog
+        task={blockingTask}
+        onOpenChange={(o) => {
+          if (!o) setBlockingTask(null);
+        }}
+        onSubmit={submitBlock}
       />
     </div>
   );
