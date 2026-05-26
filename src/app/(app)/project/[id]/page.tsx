@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
 import type { MemberDTO, ProjectColor, ProjectDTO } from "@/lib/types";
 import { ProjectBoard } from "./board";
@@ -11,9 +12,10 @@ export default async function ProjectPage({
 }: {
   params: { id: string };
 }) {
-  const [project, projects, members, tasks] = await Promise.all([
+  const [user, project, projects, members, tasks] = await Promise.all([
+    getCurrentUser(),
     prisma.project.findUnique({ where: { id: params.id } }),
-    prisma.project.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.project.findMany({ orderBy: [{ archived: "asc" }, { createdAt: "asc" }] }),
     prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.task.findMany({
       where: { projectId: params.id },
@@ -49,6 +51,7 @@ export default async function ProjectPage({
       projects={projectDtos}
       members={memberDtos}
       initialTasks={tasks.map(serializeTask)}
+      isAdmin={user?.role === "admin"}
     />
   );
 }

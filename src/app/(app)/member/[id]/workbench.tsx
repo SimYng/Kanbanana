@@ -208,7 +208,7 @@ export function MemberWorkbench({
         hint="手头正在做的事 · 拖动调整顺序"
         action={
           <NewTaskDialog
-            projects={projects}
+            projects={projects.filter((p) => !p.archived)}
             members={allMembers}
             defaultAssigneeId={member.id}
             onCreated={patchLocal}

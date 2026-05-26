@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { BoardTaskCard } from "@/components/board-task-card";
 import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskDialog } from "@/components/task-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
+import { ProjectActionsMenu } from "@/components/project-actions-menu";
 import { apiFetch } from "@/lib/fetcher";
 import {
   PROJECT_COLOR_HEX,
@@ -26,17 +27,26 @@ interface ProjectBoardProps {
   projects: ProjectDTO[];
   members: MemberDTO[];
   initialTasks: TaskDTO[];
+  isAdmin?: boolean;
 }
 
 export function ProjectBoard({
-  project,
+  project: initialProject,
   projects,
   members,
   initialTasks,
+  isAdmin,
 }: ProjectBoardProps) {
+  const [project, setProject] = useState<ProjectDTO>(initialProject);
   const [tasks, setTasks] = useState<TaskDTO[]>(initialTasks);
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // 新建任务时只允许选未归档的项目（避免给归档项目加新任务）
+  const assignableProjects = useMemo(
+    () => projects.filter((p) => !p.archived || p.id === project.id),
+    [projects, project.id],
+  );
 
   const columns = useMemo(() => {
     return TASK_STATUSES.map((status) => ({
@@ -99,28 +109,58 @@ export function ProjectBoard({
           style={{ background: PROJECT_COLOR_HEX[project.color] }}
         />
         <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
+        {project.archived && (
+          <Badge variant="muted" className="font-normal">
+            已归档
+          </Badge>
+        )}
         <Badge variant="muted" className="font-normal">
           {tasks.length} 个任务
         </Badge>
+        {isAdmin && (
+          <ProjectActionsMenu
+            project={project}
+            taskCount={tasks.length}
+            onUpdated={setProject}
+            redirectAfterDelete="/projects"
+          />
+        )}
         <div className="ml-auto flex items-center gap-2">
-          {projects.map((p) => (
-            <Button
-              key={p.id}
-              asChild
-              size="sm"
-              variant={p.id === project.id ? "secondary" : "ghost"}
-            >
-              <Link href={`/project/${p.id}`}>{p.name}</Link>
-            </Button>
-          ))}
+          {projects
+            .filter((p) => !p.archived || p.id === project.id)
+            .map((p) => (
+              <Button
+                key={p.id}
+                asChild
+                size="sm"
+                variant={p.id === project.id ? "secondary" : "ghost"}
+              >
+                <Link href={`/project/${p.id}`}>{p.name}</Link>
+              </Button>
+            ))}
           <NewTaskDialog
-            projects={projects}
+            projects={assignableProjects}
             members={members}
             defaultProjectId={project.id}
             onCreated={patchLocal}
           />
         </div>
       </div>
+
+      {project.archived && (
+        <Card className="border-muted-foreground/30 bg-muted/40">
+          <CardContent className="flex items-start gap-3 p-4 text-sm">
+            <Archive className="mt-0.5 h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="font-medium">项目已归档</div>
+              <div className="text-muted-foreground">
+                项目仍可查看与编辑现有任务，但不建议添加新任务。
+                {isAdmin && "如需恢复，点击右上角菜单 → 取消归档。"}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {columns.map((col) => (

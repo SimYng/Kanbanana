@@ -138,11 +138,14 @@ export function TaskDialog({
                   <SelectValue placeholder="选择项目" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
+                  {projects
+                    .filter((p) => !p.archived || p.id === task.projectId)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                        {p.archived && " (已归档)"}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
