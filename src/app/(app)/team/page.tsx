@@ -8,6 +8,7 @@ import { MemberAvatar } from "@/components/member-avatar";
 import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
+import { isToday } from "@/lib/utils";
 import { WORKLOAD_CAPACITY, type ProjectColor } from "@/lib/types";
 import { PROJECT_COLOR_HEX } from "@/lib/types";
 
@@ -31,19 +32,20 @@ export default async function TeamPage() {
   const memberRows = members.map((m) => {
     const mine = tasks.filter((t) => t.assigneeId === m.id);
     const open = mine.filter((t) => t.status !== "done");
+    const doneToday = mine.filter((t) => t.status === "done" && isToday(t.updatedAt)).length;
     return {
       member: m,
       doingCount: open.filter((t) => t.status === "doing").length,
       todoCount: open.filter((t) => t.status === "todo").length,
       blockedCount: open.filter((t) => t.status === "blocked").length,
-      focused: open.filter((t) => t.focusedToday).length,
+      doneToday,
       total: open.length,
     };
   });
 
   const blockedTasks = tasks.filter((t) => t.status === "blocked");
-  const overloaded = memberRows.filter((w) => w.total > WORKLOAD_CAPACITY).length;
-  const focusedTotal = memberRows.reduce((s, w) => s + w.focused, 0);
+  const doingTotal = memberRows.reduce((s, w) => s + w.doingCount, 0);
+  const doneTodayTotal = memberRows.reduce((s, w) => s + w.doneToday, 0);
 
   return (
     <div className="space-y-8">
@@ -56,16 +58,16 @@ export default async function TeamPage() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="团队成员" value={members.length} />
-        <StatCard label="今日聚焦总数" value={focusedTotal} tone="info" />
+        <StatCard label="进行中总数" value={doingTotal} tone="info" />
         <StatCard
           label="阻塞任务"
           value={blockedTasks.length}
           tone={blockedTasks.length ? "warn" : undefined}
         />
         <StatCard
-          label="工作量超载"
-          value={overloaded}
-          tone={overloaded ? "destructive" : "success"}
+          label="今日已完成"
+          value={doneTodayTotal}
+          tone={doneTodayTotal > 0 ? "success" : undefined}
         />
       </div>
 
@@ -87,7 +89,7 @@ export default async function TeamPage() {
                       <div className="text-sm font-medium">{w.member.name}</div>
                       <div className="text-xs text-muted-foreground">
                         进行 {w.doingCount} · 待办 {w.todoCount} · 阻塞 {w.blockedCount}
-                        {w.focused > 0 && ` · 今日聚焦 ${w.focused}`}
+                        {w.doneToday > 0 && ` · 今日完成 ${w.doneToday}`}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
