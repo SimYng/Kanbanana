@@ -121,35 +121,40 @@ export function ProjectActionsMenu({
             <Pencil className="h-4 w-4" />
             编辑
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              handleArchiveToggle();
-            }}
-          >
-            {project.archived ? (
-              <>
-                <ArchiveRestore className="h-4 w-4" />
-                取消归档
-              </>
-            ) : (
-              <>
-                <Archive className="h-4 w-4" />
-                归档
-              </>
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onSelect={(e) => {
-              e.preventDefault();
-              setConfirmOpen(true);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-            删除
-          </DropdownMenuItem>
+          {/* 默认项目（如「杂事」）不展示归档 / 删除入口 —— 它的存在是个不变式 */}
+          {!project.isDefault && (
+            <>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  handleArchiveToggle();
+                }}
+              >
+                {project.archived ? (
+                  <>
+                    <ArchiveRestore className="h-4 w-4" />
+                    取消归档
+                  </>
+                ) : (
+                  <>
+                    <Archive className="h-4 w-4" />
+                    归档
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setConfirmOpen(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                删除
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

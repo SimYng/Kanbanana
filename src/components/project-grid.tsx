@@ -302,6 +302,15 @@ function ProjectCardShell({
                 style={{ background: PROJECT_COLOR_HEX[project.color] }}
               />
               <span className="truncate">{project.name}</span>
+              {project.isDefault && (
+                <Badge
+                  variant="muted"
+                  className="ml-1 font-normal"
+                  title="默认项目：用来收纳零散小任务，不可删除 / 归档"
+                >
+                  默认
+                </Badge>
+              )}
               {project.archived && (
                 <Badge variant="muted" className="ml-1 font-normal">
                   已归档

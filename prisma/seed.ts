@@ -44,6 +44,20 @@ async function main() {
     members[m.email] = user.id;
   }
 
+  // 默认项目（「杂事」）：固定 id 便于排查；不可删除 / 归档，由 API 层保护。
+  // sortIndex 设为 0 让它排在列表最前面，方便随手添加零散任务。
+  await prisma.project.upsert({
+    where: { id: "default-misc" },
+    update: { isDefault: true },
+    create: {
+      id: "default-misc",
+      name: "杂事",
+      color: "gray",
+      isDefault: true,
+      sortIndex: 0,
+    },
+  });
+
   const projectDefs = [
     { name: "官网改版", color: "blue" },
     { name: "移动端 App", color: "purple" },

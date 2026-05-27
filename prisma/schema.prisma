@@ -32,6 +32,10 @@ model Project {
   name      String
   color     String   @default("blue") // "blue" | "purple" | "green" | "orange" | "pink" | "yellow" | "gray"
   archived  Boolean  @default(false)
+  // 默认项目（如「杂事」）：用来收纳零散的小任务，不必为每件小事单独开项目。
+  // 应用层保证至多一条，且禁止被删除 / 归档。SQLite 不便做部分唯一索引，
+  // 由 seed / migration + API 层共同维护这一不变式。
+  isDefault Boolean  @default(false)
   // 项目列表的展示顺序（浮点排序键），由 admin 拖拽维护，
   // 与任务的 sortIndex 同一套算法（lib/sort-index.ts）。
   sortIndex Float    @default(0)

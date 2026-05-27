@@ -40,6 +40,7 @@ export default async function UnassignedPage() {
     name: p.name,
     color: p.color as ProjectColor,
     archived: p.archived,
+    isDefault: p.isDefault,
   }));
 
   return (

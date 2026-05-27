@@ -32,6 +32,7 @@ export default async function ProjectsListPage() {
           name: p.name,
           color: p.color as ProjectColor,
           archived: p.archived,
+          isDefault: p.isDefault,
         },
         total: p._count.tasks,
         done,

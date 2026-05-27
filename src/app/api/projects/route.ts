@@ -21,6 +21,7 @@ export async function GET() {
       name: p.name,
       color: p.color as ProjectColor,
       archived: p.archived,
+      isDefault: p.isDefault,
     }));
     return okJson(out);
   } catch (e) {
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
         name: project.name,
         color: project.color as ProjectColor,
         archived: project.archived,
+        isDefault: project.isDefault,
       } satisfies ProjectDTO,
       { status: 201 },
     );

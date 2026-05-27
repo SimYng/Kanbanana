@@ -41,6 +41,7 @@ export default async function MemberPage({
     name: p.name,
     color: p.color as ProjectColor,
     archived: p.archived,
+    isDefault: p.isDefault,
   }));
 
   return (

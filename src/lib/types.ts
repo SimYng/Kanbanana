@@ -63,7 +63,13 @@ export interface TaskDTO {
   /** 状态变为 done 时由 API 自动写入；切回非 done 时清空。 */
   completedAt: string | null;
   yuqueLinks: { id: string; url: string; title: string | null }[];
-  project: { id: string; name: string; color: ProjectColor; archived: boolean };
+  project: {
+    id: string;
+    name: string;
+    color: ProjectColor;
+    archived: boolean;
+    isDefault: boolean;
+  };
   assignee: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -81,4 +87,6 @@ export interface ProjectDTO {
   name: string;
   color: ProjectColor;
   archived: boolean;
+  /** 默认项目（如「杂事」收纳袋）：禁止删除 / 归档。系统中至多一个。 */
+  isDefault: boolean;
 }
