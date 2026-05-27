@@ -24,14 +24,11 @@ import {
 import { apiFetch } from "@/lib/fetcher";
 import { isoToLocalDate, localDateToIso } from "@/lib/utils";
 import {
-  PRIORITY_LABEL,
   STATUS_LABEL,
-  TASK_PRIORITIES,
   TASK_STATUSES,
   type MemberDTO,
   type ProjectDTO,
   type TaskDTO,
-  type TaskPriority,
   type TaskStatus,
 } from "@/lib/types";
 
@@ -65,7 +62,6 @@ export function TaskDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("todo");
-  const [priority, setPriority] = useState<TaskPriority>("P2");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [projectId, setProjectId] = useState<string>("");
   const [blockedReason, setBlockedReason] = useState("");
@@ -77,7 +73,6 @@ export function TaskDialog({
     setTitle(task.title);
     setDescription(task.description ?? "");
     setStatus(task.status);
-    setPriority(task.priority);
     setAssigneeId(task.assigneeId ?? "");
     setProjectId(task.projectId);
     setBlockedReason(task.blockedReason ?? "");
@@ -96,7 +91,6 @@ export function TaskDialog({
           title: title.trim(),
           description,
           status,
-          priority,
           assigneeId: assigneeId || null,
           projectId,
           blockedReason: status === "blocked" ? blockedReason : null,
@@ -184,37 +178,20 @@ export function TaskDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label>状态</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {STATUS_LABEL[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>优先级</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_PRIORITIES.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {PRIORITY_LABEL[p]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid gap-2">
+            <Label>状态</Label>
+            <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

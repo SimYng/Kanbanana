@@ -1,7 +1,6 @@
 // StackBoard 数据模型
 // 设计原则：
-//  - 任务的"个人执行顺序"用 sortIndex（float）维护，拖拽时只更新被移动项
-//  - priority 字段独立于 sortIndex，反映客观重要性（P0/P1/P2/P3）
+//  - 任务的执行顺序用 sortIndex（float）维护，拖拽时只更新被移动项
 //  - 任务可以挂多个语雀文档链接（YuqueLink 表）
 //  - User.role 预留 admin/member，便于未来开放给员工时做权限分级
 
@@ -80,8 +79,6 @@ model Task {
 
   // "todo" | "doing" | "blocked" | "done"
   status         String   @default("todo")
-  // "P0" | "P1" | "P2" | "P3"
-  priority       String   @default("P2")
 
   // 个人执行顺序（浮点排序键）。拖拽时设为相邻两项的均值。
   // 作用域可视为"该 assignee 的全部任务"，跨视图共享一份顺序。

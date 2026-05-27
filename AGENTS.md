@@ -89,11 +89,6 @@ src/lib/
 - **任务排序**（`/api/tasks/reorder`）：作用域 = `assigneeId`（即每个成员一份独立顺序）
 - **项目排序**（`/api/projects/reorder`，admin 专属）：作用域 = `archived === false`（归档项目不参与排序）
 
-### 优先级与执行顺序双轨制
-- `priority` (P0–P3)：客观重要性
-- `sortIndex`：个人执行顺序
-两者互补不冗余。P0 排到队尾恰好暴露「在等什么」。**不要合并这两个概念**。
-
 ### 项目归档 ≠ 删除
 - **归档**：项目结束。一键可逆。具体语义：
   - 项目列表里折叠到底部分区，新建任务时下拉过滤掉，**不参与项目排序**
@@ -155,7 +150,7 @@ src/lib/
 - 错误码统一使用 `EMAIL_TAKEN` / `LAST_ADMIN` / `CANNOT_DELETE_SELF` / `HAS_AUTHORED_TASKS` / `FORBIDDEN`，前端按 code 翻译为友好中文
 
 ### 任务卡片布局两段式
-第一行：拖拽手柄 + 优先级 + 标题（`flex-1 min-w-0 truncate`）+ 操作按钮组（`shrink-0`）
+第一行：拖拽手柄 + 标题（`flex-1 min-w-0 truncate`）+ 操作按钮组（`shrink-0`）
 第二行：项目 + 负责人 + 文档 + 阻塞原因（元信息行）
 按需通过 `hideAssignee` / `hideProject` 隐藏冗余字段。
 
@@ -214,7 +209,7 @@ src/lib/
 - 主题用 `next-themes`，组件用 CSS variable（`bg-background` / `text-foreground` / `border-input` 等），**不要硬编码 hex 颜色**
 - **项目 / 项目分类没有"颜色"维度**：早期 schema 里 `Project.color` / `ProjectCategory.color` 已在 `drop_project_color` migration 中删除；UI 上靠"名称 + 文字层级 + 分类分组"识别，不要再引入项目色点 / 按项目调色板。需要状态强调时用 `STATUS_THEME`（看板列）或语义色 token（`text-info` / `text-warn` / `text-success` / `text-destructive`）
 - 按钮主操作 `variant="default"`，次操作 `variant="outline"`，破坏性 `variant="destructive"`，**避免 `ghost` 混用**导致风格不一
-- 状态标识用左侧 `1px` 色条（参考 `task-card.tsx`），优先级用 `PriorityBadge` 短形态
+- 状态标识用左侧 `1px` 色条（参考 `task-card.tsx`），不要再引入"优先级 / 重要性"等独立可视化字段
 - 中文文案用全角标点，但**操作按钮文案尽量短**（2–4 字优先）
 
 ## 9. Git / Commit 风格

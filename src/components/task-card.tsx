@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { cn, formatDueLabel } from "@/lib/utils";
 import type { TaskDTO, TaskStatus } from "@/lib/types";
@@ -104,7 +103,6 @@ export function TaskCard({
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
-          <PriorityBadge priority={task.priority} short />
           {showProject && (
             <span className="shrink-0">
               <ProjectPill name={task.project.name} size="xs" />

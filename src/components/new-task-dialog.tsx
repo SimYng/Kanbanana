@@ -26,13 +26,10 @@ import { NewProjectDialog } from "@/components/new-project-dialog";
 import { NewMemberDialog } from "@/components/new-member-dialog";
 import { apiFetch } from "@/lib/fetcher";
 import { localDateToIso } from "@/lib/utils";
-import {
-  PRIORITY_LABEL,
-  TASK_PRIORITIES,
-  type MemberDTO,
-  type ProjectDTO,
-  type TaskDTO,
-  type TaskPriority,
+import type {
+  MemberDTO,
+  ProjectDTO,
+  TaskDTO,
 } from "@/lib/types";
 
 interface NewTaskDialogProps {
@@ -63,7 +60,6 @@ export function NewTaskDialog({
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TaskPriority>("P2");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [projectId, setProjectId] = useState<string>("");
   const [dueDate, setDueDate] = useState("");
@@ -92,7 +88,6 @@ export function NewTaskDialog({
       setAssigneeId(defaultAssigneeId ?? "");
       setTitle("");
       setDescription("");
-      setPriority("P2");
       setDueDate("");
       setYuqueLink("");
     }
@@ -125,7 +120,6 @@ export function NewTaskDialog({
           description: description || undefined,
           projectId,
           assigneeId: assigneeId || null,
-          priority,
           dueDate: localDateToIso(dueDate),
           yuqueLinks,
         }),
@@ -252,31 +246,14 @@ export function NewTaskDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label>优先级</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_PRIORITIES.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {PRIORITY_LABEL[p]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="new-task-due">截止日期（可选）</Label>
-              <Input
-                id="new-task-due"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="new-task-due">截止日期（可选）</Label>
+            <Input
+              id="new-task-due"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
           </div>
 
           <div className="grid gap-2">

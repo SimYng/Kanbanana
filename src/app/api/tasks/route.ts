@@ -4,12 +4,7 @@ import { requireUser } from "@/lib/session";
 import { handleError, okJson } from "@/lib/api";
 import { serializeTask, TASK_INCLUDE } from "@/lib/serializers";
 import { appendSortIndex } from "@/lib/sort-index";
-import {
-  TASK_PRIORITIES,
-  TASK_STATUSES,
-  type TaskPriority,
-  type TaskStatus,
-} from "@/lib/types";
+import { TASK_STATUSES, type TaskStatus } from "@/lib/types";
 
 const ListQuery = z.object({
   assigneeId: z.string().optional(),
@@ -21,7 +16,6 @@ const CreateInput = z.object({
   title: z.string().min(1, "标题不能为空").max(200),
   projectId: z.string().min(1),
   assigneeId: z.string().nullable().optional(),
-  priority: z.enum(TASK_PRIORITIES as [TaskPriority, ...TaskPriority[]]).default("P2"),
   status: z.enum(TASK_STATUSES as [TaskStatus, ...TaskStatus[]]).default("todo"),
   description: z.string().optional(),
   blockedReason: z.string().optional(),
@@ -86,7 +80,6 @@ export async function POST(req: Request) {
         assigneeId,
         creatorId: user.id,
         status: data.status,
-        priority: data.priority,
         sortIndex: appendSortIndex(siblings),
         blockedReason: data.blockedReason,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,

@@ -10,7 +10,6 @@ import {
 import { prisma } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
 import { cn, formatDueLabel, isTaskVisible, isToday } from "@/lib/utils";
@@ -168,7 +167,6 @@ export default async function TeamPage() {
                   <th className="px-3 py-2 font-medium">任务</th>
                   <th className="px-3 py-2 font-medium">负责人</th>
                   <th className="px-3 py-2 font-medium">项目</th>
-                  <th className="px-3 py-2 font-medium">优先级</th>
                   <th className="px-3 py-2 font-medium">阻塞原因</th>
                 </tr>
               </thead>
@@ -179,9 +177,6 @@ export default async function TeamPage() {
                     <td className="px-3 py-2">{t.assignee?.name ?? "—"}</td>
                     <td className="px-3 py-2">
                       <ProjectPill name={t.project.name} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <PriorityBadge priority={t.priority} short />
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">
                       {t.blockedReason ?? "—"}
@@ -404,7 +399,6 @@ function PreviewItem({ task }: { task: TaskDTO }) {
       className="block rounded-md px-1.5 py-1 transition-colors hover:bg-accent/50"
     >
       <div className="flex items-center gap-1.5">
-        <PriorityBadge priority={task.priority} short />
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
           {task.title}
         </span>

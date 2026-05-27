@@ -102,35 +102,34 @@ async function main() {
     project: string;
     assignee: string;
     status: "todo" | "doing" | "blocked" | "done";
-    priority: "P0" | "P1" | "P2" | "P3";
     focusedToday?: boolean;
     blockedReason?: string;
     yuque?: string[];
   };
 
   const tasks: TaskSeed[] = [
-    { title: "首页 Hero 区交互重构", project: "官网改版", assignee: "li@local", status: "doing", priority: "P0", focusedToday: true, yuque: ["https://www.yuque.com/example/web/hero-redesign"] },
-    { title: "登录页埋点接入", project: "官网改版", assignee: "li@local", status: "todo", priority: "P1", focusedToday: true },
-    { title: "PWA 离线缓存策略评估", project: "移动端 App", assignee: "li@local", status: "todo", priority: "P2", yuque: ["https://www.yuque.com/example/app/pwa-cache"] },
-    { title: "等待设计稿确认 - 个人中心改版", project: "移动端 App", assignee: "li@local", status: "blocked", priority: "P1", blockedReason: "设计稿待小陈出图" },
-    { title: "Q1 项目复盘文档归档", project: "官网改版", assignee: "li@local", status: "done", priority: "P3" },
+    { title: "首页 Hero 区交互重构", project: "官网改版", assignee: "li@local", status: "doing", focusedToday: true, yuque: ["https://www.yuque.com/example/web/hero-redesign"] },
+    { title: "登录页埋点接入", project: "官网改版", assignee: "li@local", status: "todo", focusedToday: true },
+    { title: "PWA 离线缓存策略评估", project: "移动端 App", assignee: "li@local", status: "todo", yuque: ["https://www.yuque.com/example/app/pwa-cache"] },
+    { title: "等待设计稿确认 - 个人中心改版", project: "移动端 App", assignee: "li@local", status: "blocked", blockedReason: "设计稿待小陈出图" },
+    { title: "Q1 项目复盘文档归档", project: "官网改版", assignee: "li@local", status: "done" },
 
-    { title: "支付下单接口联调", project: "移动端 App", assignee: "wang@local", status: "doing", priority: "P0", focusedToday: true },
-    { title: "数据看板权限模型设计", project: "数据看板", assignee: "wang@local", status: "todo", priority: "P1" },
-    { title: "CRM 客户字段迁移", project: "内部 CRM", assignee: "wang@local", status: "todo", priority: "P2" },
+    { title: "支付下单接口联调", project: "移动端 App", assignee: "wang@local", status: "doing", focusedToday: true },
+    { title: "数据看板权限模型设计", project: "数据看板", assignee: "wang@local", status: "todo" },
+    { title: "CRM 客户字段迁移", project: "内部 CRM", assignee: "wang@local", status: "todo" },
 
-    { title: "个人中心视觉设计", project: "移动端 App", assignee: "chen@local", status: "doing", priority: "P1", focusedToday: true },
-    { title: "官网新视觉规范输出", project: "官网改版", assignee: "chen@local", status: "todo", priority: "P2" },
+    { title: "个人中心视觉设计", project: "移动端 App", assignee: "chen@local", status: "doing", focusedToday: true },
+    { title: "官网新视觉规范输出", project: "官网改版", assignee: "chen@local", status: "todo" },
 
-    { title: "数据看板可视化组件选型", project: "数据看板", assignee: "zhang@local", status: "doing", priority: "P1", focusedToday: true },
-    { title: "ETL 任务调度上线", project: "数据看板", assignee: "zhang@local", status: "todo", priority: "P0" },
-    { title: "等待运维开通数仓权限", project: "数据看板", assignee: "zhang@local", status: "blocked", priority: "P1", blockedReason: "运维工单 #2031 处理中" },
+    { title: "数据看板可视化组件选型", project: "数据看板", assignee: "zhang@local", status: "doing", focusedToday: true },
+    { title: "ETL 任务调度上线", project: "数据看板", assignee: "zhang@local", status: "todo" },
+    { title: "等待运维开通数仓权限", project: "数据看板", assignee: "zhang@local", status: "blocked", blockedReason: "运维工单 #2031 处理中" },
 
-    { title: "CRM 列表性能优化", project: "内部 CRM", assignee: "liu@local", status: "doing", priority: "P1", focusedToday: true },
-    { title: "App 推送服务接入", project: "移动端 App", assignee: "liu@local", status: "todo", priority: "P2" },
+    { title: "CRM 列表性能优化", project: "内部 CRM", assignee: "liu@local", status: "doing", focusedToday: true },
+    { title: "App 推送服务接入", project: "移动端 App", assignee: "liu@local", status: "todo" },
 
-    { title: "测试用例梳理 - 支付链路", project: "移动端 App", assignee: "yang@local", status: "doing", priority: "P0", focusedToday: true },
-    { title: "回归测试 - 官网改版", project: "官网改版", assignee: "yang@local", status: "todo", priority: "P1" },
+    { title: "测试用例梳理 - 支付链路", project: "移动端 App", assignee: "yang@local", status: "doing", focusedToday: true },
+    { title: "回归测试 - 官网改版", project: "官网改版", assignee: "yang@local", status: "todo" },
   ];
 
   const STEP = 1024;
@@ -146,7 +145,6 @@ async function main() {
         assigneeId,
         creatorId: admin.id,
         status: t.status,
-        priority: t.priority,
         sortIndex: assigneeCursor[assigneeId],
         focusedToday: t.focusedToday ?? false,
         blockedReason: t.blockedReason,

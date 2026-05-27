@@ -13,7 +13,6 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { cn, formatDueLabel } from "@/lib/utils";
 import type { TaskDTO, TaskStatus } from "@/lib/types";
@@ -123,7 +122,6 @@ export function BoardTaskCard({
               <GripVertical className="h-3.5 w-3.5" />
             </button>
           )}
-          <PriorityBadge priority={task.priority} short />
           {!hideAssignee && task.assignee && (
             <span className="shrink-0 text-[11px] text-muted-foreground">
               {task.assignee.name}

@@ -1,22 +1,13 @@
 export type TaskStatus = "todo" | "doing" | "blocked" | "done";
-export type TaskPriority = "P0" | "P1" | "P2" | "P3";
 export type UserRole = "admin" | "member";
 
 export const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "blocked", "done"];
-export const TASK_PRIORITIES: TaskPriority[] = ["P0", "P1", "P2", "P3"];
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "待办",
   doing: "进行中",
   blocked: "阻塞",
   done: "已完成",
-};
-
-export const PRIORITY_LABEL: Record<TaskPriority, string> = {
-  P0: "P0 紧急",
-  P1: "P1 高",
-  P2: "P2 中",
-  P3: "P3 低",
 };
 
 export interface TaskDTO {
@@ -27,7 +18,6 @@ export interface TaskDTO {
   assigneeId: string | null;
   creatorId: string;
   status: TaskStatus;
-  priority: TaskPriority;
   sortIndex: number;
   focusedToday: boolean;
   blockedReason: string | null;
