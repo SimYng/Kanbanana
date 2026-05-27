@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Users } from "lucide-react";
+import { ChevronRight, LayoutGrid, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MemberAvatar } from "@/components/member-avatar";
 import {
@@ -72,18 +73,32 @@ export function MemberWorkload({ rows }: { rows: MemberWorkloadRow[] }) {
         icon={Users}
         title="成员手头工作量"
         rightSlot={
-          <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
-            <SelectTrigger className="h-8 w-[150px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="text-xs">
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              title="进入成员任务总览：每人一列横向对比手头任务"
+            >
+              <Link href="/member/overview">
+                <LayoutGrid className="h-3.5 w-3.5" />
+                成员总览
+              </Link>
+            </Button>
+            <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
+              <SelectTrigger className="h-8 w-[150px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value} className="text-xs">
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
       {/* 成员 panel 不限高：高度自然撑开，作为整行 grid 的基准 */}
