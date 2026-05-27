@@ -87,6 +87,6 @@ export interface ProjectDTO {
   name: string;
   color: ProjectColor;
   archived: boolean;
-  /** 默认项目（如「杂事」收纳袋）：禁止删除 / 归档。系统中至多一个。 */
+  /** 默认项目（如「收集箱」）：禁止删除 / 归档。系统中至多一个。 */
   isDefault: boolean;
 }

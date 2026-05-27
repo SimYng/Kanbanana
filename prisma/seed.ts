@@ -44,14 +44,15 @@ async function main() {
     members[m.email] = user.id;
   }
 
-  // 默认项目（「杂事」）：固定 id 便于排查；不可删除 / 归档，由 API 层保护。
+  // 默认项目（「收集箱」）：固定 id 便于排查；不可删除 / 归档，由 API 层保护。
   // sortIndex 设为 0 让它排在列表最前面，方便随手添加零散任务。
+  // update 里不重置 name —— 用户在 UI 改过名（如「日常」「Inbox」）不应被 seed 覆盖。
   await prisma.project.upsert({
     where: { id: "default-misc" },
     update: { isDefault: true },
     create: {
       id: "default-misc",
-      name: "杂事",
+      name: "收集箱",
       color: "gray",
       isDefault: true,
       sortIndex: 0,

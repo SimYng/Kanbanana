@@ -121,7 +121,7 @@ export function ProjectActionsMenu({
             <Pencil className="h-4 w-4" />
             编辑
           </DropdownMenuItem>
-          {/* 默认项目（如「杂事」）不展示归档 / 删除入口 —— 它的存在是个不变式 */}
+          {/* 默认项目（如「收集箱」）不展示归档 / 删除入口 —— 它的存在是个不变式 */}
           {!project.isDefault && (
             <>
               <DropdownMenuItem
