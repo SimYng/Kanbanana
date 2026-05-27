@@ -13,6 +13,7 @@ import { BoardTaskCard } from "@/components/board-task-card";
 import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskDialog } from "@/components/task-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
+import { BlockReasonDialog } from "@/components/block-reason-dialog";
 import {
   MemberSwitcher,
   OVERVIEW_NAV_ID,
@@ -20,6 +21,7 @@ import {
 import { apiFetch } from "@/lib/fetcher";
 import { cn, isTaskVisible } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
+import { useTaskStatusAction } from "@/lib/use-task-status-action";
 import {
   STATUS_LABEL,
   type MemberDTO,
@@ -58,6 +60,8 @@ export function MembersOverview({
   const [tasks, setTasks] = useState<TaskDTO[]>(initialTasks);
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  // 「标记阻塞」需要先收集原因，单独的轻量 Dialog
+  const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
 
   // 已完成任务只展示"近 7 天完成"的，避免历史完成堆积把列压垮。
   // 边界按日对齐（今天 00:00 往前 6 天 = 7 天前 00:00），跨天时数据不抖动。
@@ -113,6 +117,71 @@ export function MembersOverview({
   function handleTaskCreated(created: TaskDTO) {
     patchLocal(created);
     router.refresh();
+  }
+
+  const runStatusAction = useTaskStatusAction({
+    getTask: (id) => tasks.find((t) => t.id === id),
+    onPatched: (t) => {
+      patchLocal(t);
+      router.refresh();
+    },
+  });
+
+  async function handleCardAction(
+    taskId: string,
+    action: { kind: "status"; value: TaskStatus },
+  ) {
+    // 标记阻塞要先收集原因，走专门的弹窗；其它状态直接快捷切换 + 撤销 toast
+    if (action.value === "blocked") {
+      const target = tasks.find((t) => t.id === taskId);
+      if (target) setBlockingTask(target);
+      return;
+    }
+    await runStatusAction(taskId, action.value);
+  }
+
+  async function submitBlock(taskId: string, reason: string) {
+    const before = tasks.find((t) => t.id === taskId);
+    if (!before) return;
+    const snapshot = {
+      status: before.status,
+      focusedToday: before.focusedToday,
+      blockedReason: before.blockedReason,
+    };
+    try {
+      const updated = await apiFetch<TaskDTO>(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "blocked", blockedReason: reason }),
+      });
+      patchLocal(updated);
+      router.refresh();
+      toast.success("已标记为「阻塞」", {
+        description: before.title,
+        duration: 6000,
+        action: {
+          label: "撤销",
+          onClick: async () => {
+            try {
+              const reverted = await apiFetch<TaskDTO>(
+                `/api/tasks/${taskId}`,
+                {
+                  method: "PATCH",
+                  body: JSON.stringify(snapshot),
+                },
+              );
+              patchLocal(reverted);
+              router.refresh();
+              toast.success("已撤销");
+            } catch (err) {
+              toast.error(`撤销失败：${(err as Error).message}`);
+            }
+          },
+        },
+      });
+    } catch (e) {
+      toast.error((e as Error).message);
+      throw e;
+    }
   }
 
   async function refreshAll() {
@@ -206,6 +275,7 @@ export function MembersOverview({
                 addTaskTooltip={`给 ${m.name} 派活`}
                 onTaskCreated={handleTaskCreated}
                 onOpen={openTaskDialog}
+                onAction={handleCardAction}
                 onReorder={handleReorder}
               />
             ))}
@@ -228,6 +298,7 @@ export function MembersOverview({
               addTaskTooltip="新建未分配任务"
               onTaskCreated={handleTaskCreated}
               onOpen={openTaskDialog}
+              onAction={handleCardAction}
               onReorder={handleReorder}
             />
           </>
@@ -253,6 +324,14 @@ export function MembersOverview({
           setTasks((prev) => prev.filter((t) => t.id !== id));
           router.refresh();
         }}
+      />
+
+      <BlockReasonDialog
+        task={blockingTask}
+        onOpenChange={(o) => {
+          if (!o) setBlockingTask(null);
+        }}
+        onSubmit={submitBlock}
       />
     </div>
   );
@@ -281,6 +360,11 @@ interface OverviewColumnProps {
   addTaskTooltip: string;
   onTaskCreated: (task: TaskDTO) => void;
   onOpen: (task: TaskDTO) => void;
+  /** 卡片 hover 出的快捷状态切换按钮回调；透传给 BoardTaskCard */
+  onAction: (
+    taskId: string,
+    action: { kind: "status"; value: TaskStatus },
+  ) => void;
   onReorder: (
     draggedId: string,
     targetId: string,
@@ -301,6 +385,7 @@ function OverviewColumn({
   addTaskTooltip,
   onTaskCreated,
   onOpen,
+  onAction,
   onReorder,
 }: OverviewColumnProps) {
   const groups = useMemo(() => {
@@ -389,6 +474,7 @@ function OverviewColumn({
                       showProject
                       showStatusBar
                       onOpen={onOpen}
+                      onAction={onAction}
                     />
                   ))}
                 </div>
