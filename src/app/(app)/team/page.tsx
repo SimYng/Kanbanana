@@ -113,7 +113,7 @@ export default async function TeamPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">成员手头工作量</h2>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {memberRows.map((w) => {
             // 进度条按未完成任务的内部结构比例铺满，不再引入"建议容量"概念
             const denom = Math.max(w.total, 1);
@@ -124,28 +124,33 @@ export default async function TeamPage() {
                 className="group block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <Card className="cursor-pointer transition-colors group-hover:border-foreground/25 group-hover:bg-accent/30">
-                  <CardContent className="space-y-1.5 p-3">
-                    <div className="flex items-center gap-3">
+                  <CardContent className="space-y-1.5 p-2.5">
+                    <div className="flex items-center gap-2.5">
                       <MemberAvatar name={w.member.name} />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium">{w.member.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          进行 {w.doingCount} · 待办 {w.todoCount} · 阻塞 {w.blockedCount}
-                          {w.doneToday > 0 && ` · 今日完成 ${w.doneToday}`}
-                        </div>
+                      <span className="text-sm font-medium">{w.member.name}</span>
+                      <div className="flex items-baseline gap-2 text-[11px] tabular-nums">
+                        <InlineStat tone="info" label="进行" value={w.doingCount} />
+                        <InlineStat tone="muted" label="待办" value={w.todoCount} />
+                        <InlineStat
+                          tone="warn"
+                          label="阻塞"
+                          value={w.blockedCount}
+                          hideWhenZero
+                        />
+                        <InlineStat
+                          tone="success"
+                          label="今日完成"
+                          value={w.doneToday}
+                          hideWhenZero
+                        />
                       </div>
-                      <span className="text-sm font-medium tabular-nums text-muted-foreground">
+                      <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
                         共 {w.total}
                       </span>
-                      {w.blockedCount > 0 && (
-                        <Badge variant="warn" className="font-normal">
-                          阻塞 ×{w.blockedCount}
-                        </Badge>
-                      )}
                       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground" />
                     </div>
                     {w.total > 0 && (
-                      <div className="flex h-1 overflow-hidden rounded-full bg-muted">
+                      <div className="flex h-0.5 overflow-hidden rounded-full bg-muted">
                         <div
                           className="bg-info transition-all"
                           style={{ width: `${(w.doingCount / denom) * 100}%` }}
@@ -259,6 +264,41 @@ export default async function TeamPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+// ───────────────────────── 成员行内紧凑数字 ─────────────────────────
+
+const INLINE_STAT_TONE = {
+  info: "text-info",
+  warn: "text-warn",
+  success: "text-success",
+  muted: "text-muted-foreground",
+} as const;
+
+/**
+ * "·进行 3" 形式的行内小数字，配色随状态变化：
+ *  - info(蓝) 进行中 / warn(橙) 阻塞 / success(绿) 今日完成 / muted(灰) 待办
+ *  - hideWhenZero=true 时 0 直接不渲染，避免一排没意义的 0
+ */
+function InlineStat({
+  tone,
+  label,
+  value,
+  hideWhenZero,
+}: {
+  tone: keyof typeof INLINE_STAT_TONE;
+  label: string;
+  value: number;
+  hideWhenZero?: boolean;
+}) {
+  if (hideWhenZero && value === 0) return null;
+  return (
+    <span className={cn("inline-flex items-baseline gap-0.5", INLINE_STAT_TONE[tone])}>
+      <span className="text-muted-foreground/60">·</span>
+      <span className="text-muted-foreground/80">{label}</span>
+      <span className="font-medium">{value}</span>
+    </span>
   );
 }
 
