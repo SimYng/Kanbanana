@@ -18,7 +18,6 @@ import { apiFetch } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
 import {
-  PROJECT_COLOR_HEX,
   STATUS_LABEL,
   TASK_STATUSES,
   type MemberDTO,
@@ -198,10 +197,6 @@ export function ProjectBoard({
               项目列表
             </Link>
           </Button>
-          <span
-            className="inline-block h-3 w-3 rounded-full"
-            style={{ background: PROJECT_COLOR_HEX[project.color] }}
-          />
           <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
           {project.archived && (
             <Badge variant="muted" className="font-normal">
@@ -364,10 +359,6 @@ function ProjectSwitcherChip({
       )}
       title={`${project.name} · 待办 ${stats.todo} · 进行 ${stats.doing} · 阻塞 ${stats.blocked}`}
     >
-      <span
-        className="inline-block h-2 w-2 shrink-0 rounded-full"
-        style={{ background: PROJECT_COLOR_HEX[project.color] }}
-      />
       <span className="max-w-[10rem] truncate">{project.name}</span>
       {hasAny && (
         <span className="ml-0.5 inline-flex items-center gap-1 text-[10px] tabular-nums">

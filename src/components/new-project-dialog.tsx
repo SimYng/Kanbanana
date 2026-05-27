@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -24,14 +24,10 @@ import {
 } from "@/components/ui/select";
 import { NewCategoryDialog } from "@/components/new-category-dialog";
 import { apiFetch } from "@/lib/fetcher";
-import {
-  PROJECT_COLOR_HEX,
-  PROJECT_COLORS,
-  type ProjectCategoryDTO,
-  type ProjectColor,
-  type ProjectDTO,
+import type {
+  ProjectCategoryDTO,
+  ProjectDTO,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 interface NewProjectDialogProps {
   variant?: "default" | "outline";
@@ -70,7 +66,6 @@ export function NewProjectDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [color, setColor] = useState<ProjectColor>("blue");
   const [busy, setBusy] = useState(false);
   // 本地维护一份分类列表，便于在"快捷新建分类"后立即出现在下拉里
   const [localCategories, setLocalCategories] = useState<ProjectCategoryDTO[]>(
@@ -91,7 +86,6 @@ export function NewProjectDialog({
   useEffect(() => {
     if (open && !prevOpenRef.current) {
       setName("");
-      setColor("blue");
       setCategoryId(pickInitialCategoryId(categories, defaultCategoryId));
     }
     prevOpenRef.current = open;
@@ -99,7 +93,6 @@ export function NewProjectDialog({
 
   function reset() {
     setName("");
-    setColor("blue");
     setCategoryId(pickInitialCategoryId(localCategories, defaultCategoryId));
   }
 
@@ -115,11 +108,9 @@ export function NewProjectDialog({
     if (!name.trim()) return;
     setBusy(true);
     try {
-      const body: {
-        name: string;
-        color: ProjectColor;
-        categoryId?: string;
-      } = { name: name.trim(), color };
+      const body: { name: string; categoryId?: string } = {
+        name: name.trim(),
+      };
       if (categoryId) body.categoryId = categoryId;
       const created = await apiFetch<ProjectDTO>("/api/projects", {
         method: "POST",
@@ -212,29 +203,6 @@ export function NewProjectDialog({
               </div>
             </div>
           )}
-
-          <div className="grid gap-2">
-            <Label>颜色</Label>
-            <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`选择 ${c} 颜色`}
-                  onClick={() => setColor(c)}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full ring-offset-background transition-all",
-                    color === c
-                      ? "ring-2 ring-foreground ring-offset-2"
-                      : "ring-1 ring-border hover:ring-foreground/40",
-                  )}
-                  style={{ background: PROJECT_COLOR_HEX[c] }}
-                >
-                  {color === c && <Check className="h-4 w-4 text-white" />}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>

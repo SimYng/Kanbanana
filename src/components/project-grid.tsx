@@ -27,11 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProjectActionsMenu } from "@/components/project-actions-menu";
 import { apiFetch } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
-import {
-  PROJECT_COLOR_HEX,
-  type ProjectCategoryDTO,
-  type ProjectDTO,
-} from "@/lib/types";
+import type { ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
 
 export interface ProjectGridItem {
   project: ProjectDTO;
@@ -307,16 +303,12 @@ function ProjectCardShell({
           className={cn(
             "h-full transition-colors hover:border-foreground/30",
             dimmed && "opacity-70",
-            // 给左侧拖拽手柄让出一点位置，避免遮住色点
+            // 给左侧拖拽手柄让出一点位置
             draggable && "pl-3",
           )}
         >
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 pr-10 text-base">
-              <span
-                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ background: PROJECT_COLOR_HEX[project.color] }}
-              />
               <span className="truncate">{project.name}</span>
               {project.isDefault && (
                 <Badge
@@ -337,11 +329,8 @@ function ProjectCardShell({
           <CardContent className="space-y-3 pt-0">
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full transition-all"
-                style={{
-                  width: `${pct}%`,
-                  background: PROJECT_COLOR_HEX[project.color],
-                }}
+                className="h-full bg-primary transition-all"
+                style={{ width: `${pct}%` }}
               />
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">

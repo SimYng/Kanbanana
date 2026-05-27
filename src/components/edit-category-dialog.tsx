@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -14,13 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/fetcher";
-import {
-  PROJECT_COLOR_HEX,
-  PROJECT_COLORS,
-  type ProjectCategoryDTO,
-  type ProjectColor,
-} from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { ProjectCategoryDTO } from "@/lib/types";
 
 interface EditCategoryDialogProps {
   category: ProjectCategoryDTO | null;
@@ -36,13 +29,11 @@ export function EditCategoryDialog({
   onSaved,
 }: EditCategoryDialogProps) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState<ProjectColor>("gray");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open && category) {
       setName(category.name);
-      setColor(category.color);
     }
   }, [open, category]);
 
@@ -55,7 +46,7 @@ export function EditCategoryDialog({
         `/api/categories/${category.id}`,
         {
           method: "PATCH",
-          body: JSON.stringify({ name: name.trim(), color }),
+          body: JSON.stringify({ name: name.trim() }),
         },
       );
       onSaved?.(updated);
@@ -89,29 +80,6 @@ export function EditCategoryDialog({
               onChange={(e) => setName(e.target.value)}
               maxLength={60}
             />
-          </div>
-
-          <div className="grid gap-2">
-            <Label>颜色</Label>
-            <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`选择 ${c} 颜色`}
-                  onClick={() => setColor(c)}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full ring-offset-background transition-all",
-                    color === c
-                      ? "ring-2 ring-foreground ring-offset-2"
-                      : "ring-1 ring-border hover:ring-foreground/40",
-                  )}
-                  style={{ background: PROJECT_COLOR_HEX[c] }}
-                >
-                  {color === c && <Check className="h-4 w-4 text-white" />}
-                </button>
-              ))}
-            </div>
           </div>
 
           <DialogFooter>

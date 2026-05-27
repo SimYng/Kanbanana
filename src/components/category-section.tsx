@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CategoryActionsMenu } from "@/components/category-actions-menu";
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import { ProjectGrid, type ProjectGridItem } from "@/components/project-grid";
-import {
-  PROJECT_COLOR_HEX,
-  type ProjectCategoryDTO,
-} from "@/lib/types";
+import type { ProjectCategoryDTO } from "@/lib/types";
 
 interface CategorySectionProps {
   category: ProjectCategoryDTO;
@@ -35,10 +32,6 @@ export function CategorySection({
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <span
-          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: PROJECT_COLOR_HEX[category.color] }}
-        />
         <h2 className="text-base font-semibold tracking-tight">
           {category.name}
         </h2>

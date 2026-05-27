@@ -14,7 +14,7 @@ import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
 import { cn, formatDueLabel, isTaskVisible, isToday } from "@/lib/utils";
-import type { ProjectColor, TaskDTO } from "@/lib/types";
+import type { TaskDTO } from "@/lib/types";
 import {
   ProjectProgressGrid,
   type ProjectProgressItem,
@@ -98,7 +98,6 @@ export default async function TeamPage() {
     return {
       id: p.id,
       name: p.name,
-      color: p.color as ProjectColor,
       doneCount,
       blockedCount,
       totalCount,
@@ -179,7 +178,7 @@ export default async function TeamPage() {
                     <td className="px-3 py-2 font-medium">{t.title}</td>
                     <td className="px-3 py-2">{t.assignee?.name ?? "—"}</td>
                     <td className="px-3 py-2">
-                      <ProjectPill name={t.project.name} color={t.project.color} />
+                      <ProjectPill name={t.project.name} />
                     </td>
                     <td className="px-3 py-2">
                       <PriorityBadge priority={t.priority} short />
@@ -421,7 +420,7 @@ function PreviewItem({ task }: { task: TaskDTO }) {
         )}
       </div>
       <div className="mt-0.5 flex items-center gap-1.5 pl-0.5 text-[11px] text-muted-foreground">
-        <ProjectPill name={task.project.name} color={task.project.color} />
+        <ProjectPill name={task.project.name} />
         <span className="text-muted-foreground/40">·</span>
         <span className="truncate">{task.assignee?.name ?? "未分配"}</span>
       </div>

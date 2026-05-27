@@ -107,7 +107,7 @@ export function TaskCard({
           <PriorityBadge priority={task.priority} short />
           {showProject && (
             <span className="shrink-0">
-              <ProjectPill name={task.project.name} color={task.project.color} size="xs" />
+              <ProjectPill name={task.project.name} size="xs" />
             </span>
           )}
           <button

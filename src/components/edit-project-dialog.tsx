@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -21,14 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/fetcher";
-import {
-  PROJECT_COLOR_HEX,
-  PROJECT_COLORS,
-  type ProjectCategoryDTO,
-  type ProjectColor,
-  type ProjectDTO,
+import type {
+  ProjectCategoryDTO,
+  ProjectDTO,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 interface EditProjectDialogProps {
   project: ProjectDTO | null;
@@ -47,14 +42,12 @@ export function EditProjectDialog({
   categories,
 }: EditProjectDialogProps) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState<ProjectColor>("blue");
   const [categoryId, setCategoryId] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open && project) {
       setName(project.name);
-      setColor(project.color);
       setCategoryId(project.categoryId);
     }
   }, [open, project]);
@@ -64,11 +57,9 @@ export function EditProjectDialog({
     if (!project || !name.trim()) return;
     setBusy(true);
     try {
-      const body: {
-        name: string;
-        color: ProjectColor;
-        categoryId?: string;
-      } = { name: name.trim(), color };
+      const body: { name: string; categoryId?: string } = {
+        name: name.trim(),
+      };
       if (categories && categoryId && categoryId !== project.categoryId) {
         body.categoryId = categoryId;
       }
@@ -127,29 +118,6 @@ export function EditProjectDialog({
               </Select>
             </div>
           )}
-
-          <div className="grid gap-2">
-            <Label>颜色</Label>
-            <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`选择 ${c} 颜色`}
-                  onClick={() => setColor(c)}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full ring-offset-background transition-all",
-                    color === c
-                      ? "ring-2 ring-foreground ring-offset-2"
-                      : "ring-1 ring-border hover:ring-foreground/40",
-                  )}
-                  style={{ background: PROJECT_COLOR_HEX[c] }}
-                >
-                  {color === c && <Check className="h-4 w-4 text-white" />}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <DialogFooter>
             <Button

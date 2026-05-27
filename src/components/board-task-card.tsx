@@ -149,12 +149,7 @@ export function BoardTaskCard({
           <div className="flex items-center gap-2 pl-6 text-[11px] text-muted-foreground">
             {showProject && (
               <span className="min-w-0 truncate">
-                <ProjectPill
-                  name={task.project.name}
-                  color={task.project.color}
-                  size="xs"
-                  hideDot
-                />
+                <ProjectPill name={task.project.name} size="xs" />
               </span>
             )}
             {hasYuque && <span className="shrink-0">文档 ×{task.yuqueLinks.length}</span>}

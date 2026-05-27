@@ -12,13 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { PROJECT_COLOR_HEX, type ProjectColor } from "@/lib/types";
 import { PanelHeader } from "./panel-header";
 
 export interface ProjectProgressItem {
   id: string;
   name: string;
-  color: ProjectColor;
   doneCount: number;
   blockedCount: number;
   totalCount: number;
@@ -113,7 +111,6 @@ export function ProjectProgressGrid({
 }
 
 function ProgressRow({ item }: { item: ProjectProgressItem }) {
-  const hex = PROJECT_COLOR_HEX[item.color];
   return (
     <Link
       href={`/project/${item.id}`}
@@ -121,10 +118,6 @@ function ProgressRow({ item }: { item: ProjectProgressItem }) {
     >
       <div className="space-y-1.5 px-3 py-2 transition-colors group-hover:bg-accent/40">
         <div className="flex items-center gap-2">
-          <span
-            className="inline-block h-2 w-2 shrink-0 rounded-full"
-            style={{ background: hex }}
-          />
           <span className="min-w-0 flex-1 truncate text-sm font-medium">
             {item.name}
           </span>
@@ -143,8 +136,8 @@ function ProgressRow({ item }: { item: ProjectProgressItem }) {
         </div>
         <div className="h-1 overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full transition-all"
-            style={{ width: `${item.pct}%`, background: hex }}
+            className="h-full bg-primary transition-all"
+            style={{ width: `${item.pct}%` }}
           />
         </div>
       </div>

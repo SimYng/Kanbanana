@@ -2,7 +2,7 @@
 
 import { useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -16,13 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/fetcher";
-import {
-  PROJECT_COLOR_HEX,
-  PROJECT_COLORS,
-  type ProjectCategoryDTO,
-  type ProjectColor,
-} from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { ProjectCategoryDTO } from "@/lib/types";
 
 interface NewCategoryDialogProps {
   variant?: "default" | "outline";
@@ -40,12 +34,10 @@ export function NewCategoryDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [color, setColor] = useState<ProjectColor>("gray");
   const [busy, setBusy] = useState(false);
 
   function reset() {
     setName("");
-    setColor("gray");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -55,7 +47,7 @@ export function NewCategoryDialog({
     try {
       const created = await apiFetch<ProjectCategoryDTO>("/api/categories", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), color }),
+        body: JSON.stringify({ name: name.trim() }),
       });
       onCreated?.(created);
       toast.success("分类已创建");
@@ -105,29 +97,6 @@ export function NewCategoryDialog({
               placeholder="例如：业务系统 / 内部工具 / AI 探索"
               maxLength={60}
             />
-          </div>
-
-          <div className="grid gap-2">
-            <Label>颜色</Label>
-            <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`选择 ${c} 颜色`}
-                  onClick={() => setColor(c)}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full ring-offset-background transition-all",
-                    color === c
-                      ? "ring-2 ring-foreground ring-offset-2"
-                      : "ring-1 ring-border hover:ring-foreground/40",
-                  )}
-                  style={{ background: PROJECT_COLOR_HEX[c] }}
-                >
-                  {color === c && <Check className="h-4 w-4 text-white" />}
-                </button>
-              ))}
-            </div>
           </div>
 
           <DialogFooter>
