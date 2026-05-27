@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentType } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -77,8 +78,9 @@ export function TaskCard({
   const showProject = !hideProject;
   const showAssignee = !hideAssignee && task.assignee;
   const showYuque = task.yuqueLinks.length > 0;
-  const showBlocked = task.status === "blocked" && task.blockedReason;
-  const hasMetaRow = showProject || showAssignee || showYuque || showBlocked;
+  const showBlocked = task.status === "blocked" && !!task.blockedReason;
+  // 项目 pill 已经移到标题行，meta 行只在还有 assignee / yuque / blocked 时才出现
+  const hasMetaRow = showAssignee || showYuque || showBlocked;
 
   return (
     <Card
@@ -91,7 +93,7 @@ export function TaskCard({
       )}
     >
       <div className={cn("w-1 shrink-0", statusBarClass(task.status))} />
-      <div className="min-w-0 flex-1 space-y-1.5 p-3">
+      <div className="min-w-0 flex-1 space-y-1 px-3 py-2">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -100,9 +102,14 @@ export function TaskCard({
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="h-4 w-4" />
+            <GripVertical className="h-3.5 w-3.5" />
           </button>
           <PriorityBadge priority={task.priority} short />
+          {showProject && (
+            <span className="shrink-0">
+              <ProjectPill name={task.project.name} color={task.project.color} size="xs" />
+            </span>
+          )}
           <button
             type="button"
             onClick={() => onOpen?.(task)}
@@ -126,10 +133,7 @@ export function TaskCard({
         </div>
 
         {hasMetaRow && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-7 text-xs text-muted-foreground">
-            {showProject && (
-              <ProjectPill name={task.project.name} color={task.project.color} />
-            )}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-6 text-xs text-muted-foreground">
             {showAssignee && task.assignee && (
               <span>{task.assignee.name}</span>
             )}
@@ -158,6 +162,14 @@ export function TaskCard({
   );
 }
 
+/**
+ * 卡片右侧的紧凑操作组。
+ *
+ * 视觉规则（保持同组按钮风格一致）：
+ *  - 三个按钮高度统一 h-7，圆角统一 rounded-md
+ *  - 主操作（开始 / 完成 / 解除阻塞）：filled，带文字
+ *  - 次操作（阻塞 / 暂停）：outline 同等高度 icon-only 方块按钮（h-7 w-7）
+ */
 function ActionButtons({
   status,
   taskId,
@@ -167,44 +179,42 @@ function ActionButtons({
   taskId: string;
   onAction: (taskId: string, action: Action) => void;
 }) {
+  const primaryClass = "h-7 px-2.5 text-xs [&_svg]:size-3.5";
+
   if (status === "todo") {
     return (
       <Button
         size="sm"
+        className={cn("shrink-0", primaryClass)}
         onClick={() => onAction(taskId, { kind: "status", value: "doing" })}
       >
-        <PlayCircle className="h-3.5 w-3.5" />
+        <PlayCircle />
         开始
       </Button>
     );
   }
   if (status === "doing") {
     return (
-      <div className="flex shrink-0 gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <Button
           size="sm"
+          className={primaryClass}
           onClick={() => onAction(taskId, { kind: "status", value: "done" })}
         >
-          <CheckCircle2 className="h-3.5 w-3.5" />
+          <CheckCircle2 />
           完成
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
+        <IconAction
+          label="标记阻塞"
+          Icon={AlertTriangle}
+          tone="text-warn"
           onClick={() => onAction(taskId, { kind: "status", value: "blocked" })}
-        >
-          <AlertTriangle className="h-3.5 w-3.5" />
-          阻塞
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          title="暂停并退回待办"
+        />
+        <IconAction
+          label="暂停退回待办"
+          Icon={PauseCircle}
           onClick={() => onAction(taskId, { kind: "status", value: "todo" })}
-        >
-          <PauseCircle className="h-3.5 w-3.5" />
-          暂停
-        </Button>
+        />
       </div>
     );
   }
@@ -212,12 +222,42 @@ function ActionButtons({
     return (
       <Button
         size="sm"
+        className={cn("shrink-0", primaryClass)}
         onClick={() => onAction(taskId, { kind: "status", value: "todo" })}
       >
-        <CircleDot className="h-3.5 w-3.5" />
+        <CircleDot />
         解除阻塞
       </Button>
     );
   }
   return null;
+}
+
+function IconAction({
+  label,
+  Icon,
+  tone,
+  onClick,
+}: {
+  label: string;
+  Icon: ComponentType<{ className?: string }>;
+  tone?: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cn(
+        "h-7 w-7 shrink-0 p-0 [&_svg]:size-3.5",
+        tone ?? "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Icon />
+    </Button>
+  );
 }
