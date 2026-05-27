@@ -69,6 +69,7 @@ export interface TaskDTO {
     color: ProjectColor;
     archived: boolean;
     isDefault: boolean;
+    categoryId: string;
   };
   assignee: { id: string; name: string } | null;
   createdAt: string;
@@ -89,4 +90,15 @@ export interface ProjectDTO {
   archived: boolean;
   /** 默认项目（如「收集箱」）：禁止删除 / 归档。系统中至多一个。 */
   isDefault: boolean;
+  /** 所属分类 id。所有项目都属于某个分类（默认为「未分类」）。 */
+  categoryId: string;
+}
+
+export interface ProjectCategoryDTO {
+  id: string;
+  name: string;
+  color: ProjectColor;
+  /** 默认分类（「未分类」）：禁止删除。系统中至多一个。 */
+  isDefault: boolean;
+  sortIndex: number;
 }

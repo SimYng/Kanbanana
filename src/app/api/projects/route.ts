@@ -8,6 +8,8 @@ import { PROJECT_COLORS, type ProjectColor, type ProjectDTO } from "@/lib/types"
 const CreateInput = z.object({
   name: z.string().min(1).max(100),
   color: z.enum(PROJECT_COLORS as [ProjectColor, ...ProjectColor[]]).default("blue"),
+  /** 所属分类 id；未传则归入默认分类（「未分类」）。 */
+  categoryId: z.string().min(1).optional(),
 });
 
 export async function GET() {
@@ -22,6 +24,7 @@ export async function GET() {
       color: p.color as ProjectColor,
       archived: p.archived,
       isDefault: p.isDefault,
+      categoryId: p.categoryId,
     }));
     return okJson(out);
   } catch (e) {
@@ -34,6 +37,19 @@ export async function POST(req: Request) {
     await requireAdmin();
     const data = CreateInput.parse(await req.json());
 
+    // 未传 categoryId 时落到默认分类（「未分类」）；如果默认分类被人为破坏则报错
+    let categoryId = data.categoryId;
+    if (!categoryId) {
+      const fallback = await prisma.projectCategory.findFirst({
+        where: { isDefault: true },
+        select: { id: true },
+      });
+      if (!fallback) {
+        return okJson({ error: "DEFAULT_CATEGORY_MISSING" }, { status: 500 });
+      }
+      categoryId = fallback.id;
+    }
+
     // 新项目挂到「活跃项目」队尾。归档项目不参与拖拽，不会被影响。
     const activeSiblings = await prisma.project.findMany({
       where: { archived: false },
@@ -42,7 +58,12 @@ export async function POST(req: Request) {
     });
 
     const project = await prisma.project.create({
-      data: { ...data, sortIndex: appendSortIndex(activeSiblings) },
+      data: {
+        name: data.name,
+        color: data.color,
+        categoryId,
+        sortIndex: appendSortIndex(activeSiblings),
+      },
     });
     return okJson(
       {
@@ -51,6 +72,7 @@ export async function POST(req: Request) {
         color: project.color as ProjectColor,
         archived: project.archived,
         isDefault: project.isDefault,
+        categoryId: project.categoryId,
       } satisfies ProjectDTO,
       { status: 201 },
     );

@@ -13,76 +13,58 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { apiFetch } from "@/lib/fetcher";
 import {
   PROJECT_COLOR_HEX,
   PROJECT_COLORS,
   type ProjectCategoryDTO,
   type ProjectColor,
-  type ProjectDTO,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-interface EditProjectDialogProps {
-  project: ProjectDTO | null;
+interface EditCategoryDialogProps {
+  category: ProjectCategoryDTO | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSaved?: (project: ProjectDTO) => void;
-  /** 分类列表；不传时表单里不展示分类选择 */
-  categories?: ProjectCategoryDTO[];
+  onSaved?: (category: ProjectCategoryDTO) => void;
 }
 
-export function EditProjectDialog({
-  project,
+export function EditCategoryDialog({
+  category,
   open,
   onOpenChange,
   onSaved,
-  categories,
-}: EditProjectDialogProps) {
+}: EditCategoryDialogProps) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState<ProjectColor>("blue");
-  const [categoryId, setCategoryId] = useState<string>("");
+  const [color, setColor] = useState<ProjectColor>("gray");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (open && project) {
-      setName(project.name);
-      setColor(project.color);
-      setCategoryId(project.categoryId);
+    if (open && category) {
+      setName(category.name);
+      setColor(category.color);
     }
-  }, [open, project]);
+  }, [open, category]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!project || !name.trim()) return;
+    if (!category || !name.trim()) return;
     setBusy(true);
     try {
-      const body: {
-        name: string;
-        color: ProjectColor;
-        categoryId?: string;
-      } = { name: name.trim(), color };
-      if (categories && categoryId && categoryId !== project.categoryId) {
-        body.categoryId = categoryId;
-      }
-      const updated = await apiFetch<ProjectDTO>(`/api/projects/${project.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(body),
-      });
+      const updated = await apiFetch<ProjectCategoryDTO>(
+        `/api/categories/${category.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ name: name.trim(), color }),
+        },
+      );
       onSaved?.(updated);
-      toast.success("项目已更新");
+      toast.success("分类已更新");
       onOpenChange(false);
     } catch (e) {
       const msg = (e as Error).message;
       if (msg === "FORBIDDEN") {
-        toast.error("只有管理员可以编辑项目");
+        toast.error("只有管理员可以编辑分类");
       } else {
         toast.error(`保存失败：${msg}`);
       }
@@ -95,38 +77,19 @@ export function EditProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>编辑项目</DialogTitle>
+          <DialogTitle>编辑分类</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="edit-project-name">项目名称</Label>
+            <Label htmlFor="edit-category-name">分类名称</Label>
             <Input
-              id="edit-project-name"
+              id="edit-category-name"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              maxLength={100}
+              maxLength={60}
             />
           </div>
-
-          {categories && categories.length > 0 && (
-            <div className="grid gap-2">
-              <Label htmlFor="edit-project-category">分类</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger id="edit-project-category">
-                  <SelectValue placeholder="选择分类" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                      {c.isDefault ? "（默认）" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           <div className="grid gap-2">
             <Label>颜色</Label>

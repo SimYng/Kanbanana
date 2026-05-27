@@ -15,7 +15,7 @@ import {
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EditProjectDialog } from "@/components/edit-project-dialog";
 import { apiFetch } from "@/lib/fetcher";
-import type { ProjectDTO } from "@/lib/types";
+import type { ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
 
 interface ProjectActionsMenuProps {
   project: ProjectDTO;
@@ -31,6 +31,8 @@ interface ProjectActionsMenuProps {
   onDeleted?: (id: string) => void;
   /** 删除完成后跳转到指定路径；默认不跳转 */
   redirectAfterDelete?: string;
+  /** 分类列表；传入后编辑对话框会展示「移动到分类」选项 */
+  categories?: ProjectCategoryDTO[];
 }
 
 export function ProjectActionsMenu({
@@ -41,6 +43,7 @@ export function ProjectActionsMenu({
   onUpdated,
   onDeleted,
   redirectAfterDelete,
+  categories,
 }: ProjectActionsMenuProps) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -162,6 +165,7 @@ export function ProjectActionsMenu({
         project={editOpen ? project : null}
         open={editOpen}
         onOpenChange={setEditOpen}
+        categories={categories}
         onSaved={(p) => {
           onUpdated?.(p);
           router.refresh();

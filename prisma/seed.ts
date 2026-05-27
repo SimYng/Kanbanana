@@ -44,6 +44,20 @@ async function main() {
     members[m.email] = user.id;
   }
 
+  // 默认分类（「未分类」）：固定 id 便于排查；不可删除，由 API 层保护。
+  // 所有未指定分类的项目都会落到这里；删除其它分类时项目会被自动迁回。
+  await prisma.projectCategory.upsert({
+    where: { id: "default-category" },
+    update: { isDefault: true },
+    create: {
+      id: "default-category",
+      name: "未分类",
+      color: "gray",
+      isDefault: true,
+      sortIndex: 0,
+    },
+  });
+
   // 默认项目（「收集箱」）：固定 id 便于排查；不可删除 / 归档，由 API 层保护。
   // sortIndex 设为 0 让它排在列表最前面，方便随手添加零散任务。
   // update 里不重置 name —— 用户在 UI 改过名（如「日常」「Inbox」）不应被 seed 覆盖。
@@ -56,6 +70,7 @@ async function main() {
       color: "gray",
       isDefault: true,
       sortIndex: 0,
+      categoryId: "default-category",
     },
   });
 
@@ -74,7 +89,12 @@ async function main() {
     const project =
       existing ??
       (await prisma.project.create({
-        data: { name: p.name, color: p.color, sortIndex: (i + 1) * PROJECT_STEP },
+        data: {
+          name: p.name,
+          color: p.color,
+          sortIndex: (i + 1) * PROJECT_STEP,
+          categoryId: "default-category",
+        },
       }));
     projects[p.name] = project.id;
   }

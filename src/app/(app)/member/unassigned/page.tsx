@@ -41,6 +41,7 @@ export default async function UnassignedPage() {
     color: p.color as ProjectColor,
     archived: p.archived,
     isDefault: p.isDefault,
+    categoryId: p.categoryId,
   }));
 
   return (

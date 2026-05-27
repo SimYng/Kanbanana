@@ -27,6 +27,27 @@ model User {
   tasksCreated  Task[]  @relation("Creator")
 }
 
+/// 项目分类（如「业务」「内部工具」「AI 探索」）。
+/// 用于把同领域的项目折成一组展示；分类是一个轻概念，不影响任务模型。
+model ProjectCategory {
+  id        String   @id @default(cuid())
+  name      String
+  /// 分类色点（与项目色一套色板）
+  color     String   @default("gray")
+  /// 默认分类（「未分类」）：禁止删除；
+  /// 新建项目默认归入此处；删除其它分类时该分类下的项目会被自动迁回。
+  /// 应用层 + seed / migration 共同维护「至多一条 isDefault」这一不变式。
+  isDefault Boolean  @default(false)
+  /// 分类的展示顺序（浮点排序键，与项目 / 任务同一套算法）
+  sortIndex Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+
+  @@index([sortIndex])
+}
+
 model Project {
   id        String   @id @default(cuid())
   name      String
@@ -39,12 +60,17 @@ model Project {
   // 项目列表的展示顺序（浮点排序键），由 admin 拖拽维护，
   // 与任务的 sortIndex 同一套算法（lib/sort-index.ts）。
   sortIndex Float    @default(0)
+  /// 所属分类。删除分类前必须先把项目迁走，DB 用 Restrict 兜底；
+  /// API 层 DELETE 分类时会自动迁到默认分类后再删。
+  categoryId String
+  category   ProjectCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tasks Task[]
 
   @@index([archived, sortIndex])
+  @@index([categoryId, sortIndex])
 }
 
 model Task {

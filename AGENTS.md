@@ -112,6 +112,16 @@ src/lib/
 - grid 布局用 `rectSortingStrategy`，与列表排序的 `verticalListSortingStrategy` 区分
 - 全局所有列项目下拉 / 项目列表都按 `[archived asc, sortIndex asc, createdAt asc]` 排序，保持视觉一致
 - 归档区不可拖（API 校验 `ARCHIVED_NOT_SORTABLE`，前端 grid 也不挂 dnd）
+- **项目排序作用域 = 同分类 + 未归档**：项目按 `categoryId` 分组渲染，每个分类是独立的 `ProjectGrid` / `SortableContext`；
+  `/api/projects/reorder` 也只允许同 `categoryId` 内拖（跨分类返回 `CROSS_CATEGORY_NOT_SORTABLE`），跨分类移动请走「编辑项目」对话框
+
+### 项目分类（admin 专属）
+- 「分类」是把同领域项目折成一组展示的轻概念，对任务模型完全无感
+- 每个项目必须挂在某个分类下（`Project.categoryId NOT NULL` + FK Restrict），UI 上按分类分组渲染
+- **默认分类「未分类」（`id="default-category"`, `isDefault=true`）**：未指定分类的新项目会落到这里；删除其它分类时该分类下的项目会被自动迁回，禁止删除（API 返回 `DEFAULT_CATEGORY_NOT_DELETABLE`）
+- 分类排序复用 `lib/sort-index` 同一套算法，新建分类挂到队尾
+- `/api/categories` 的 DELETE 在事务里先 `updateMany` 把该分类下的项目迁到默认分类，再删分类本身；保证不丢项目
+- 默认分类与「收集箱」默认项目是两套独立的不变式：分类层 `default-category` ↔ 项目层 `default-misc`，互不绑定
 
 ### 阻塞必须带原因
 点击「阻塞」按钮**不直接**改 status，先弹 `BlockReasonDialog` 收集 `blockedReason`，提交时一并 PATCH。切到非 blocked 状态时**主动清空 blockedReason**，避免残留旧文案。参见 `workbench.tsx` 的 `handleAction`。

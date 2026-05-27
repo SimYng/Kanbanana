@@ -27,7 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { ProjectActionsMenu } from "@/components/project-actions-menu";
 import { apiFetch } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
-import { PROJECT_COLOR_HEX, type ProjectDTO } from "@/lib/types";
+import {
+  PROJECT_COLOR_HEX,
+  type ProjectCategoryDTO,
+  type ProjectDTO,
+} from "@/lib/types";
 
 export interface ProjectGridItem {
   project: ProjectDTO;
@@ -44,6 +48,8 @@ interface ProjectGridProps {
   sortable?: boolean;
   /** 整体淡化（归档区使用） */
   dimmed?: boolean;
+  /** 分类列表，会传给编辑对话框做"移动到分类" */
+  categories?: ProjectCategoryDTO[];
 }
 
 /**
@@ -57,6 +63,7 @@ export function ProjectGrid({
   isAdmin,
   sortable,
   dimmed,
+  categories,
 }: ProjectGridProps) {
   const router = useRouter();
   const [list, setList] = useState(items);
@@ -146,6 +153,7 @@ export function ProjectGrid({
             isAdmin={isAdmin}
             dimmed={dimmed}
             draggable
+            categories={categories}
             onUpdated={handleItemUpdated}
             onDeleted={handleItemDeleted}
           />
@@ -156,6 +164,7 @@ export function ProjectGrid({
             isAdmin={isAdmin}
             dimmed={dimmed}
             draggable={false}
+            categories={categories}
             onUpdated={handleItemUpdated}
             onDeleted={handleItemDeleted}
           />
@@ -187,6 +196,7 @@ interface CardProps {
   isAdmin: boolean;
   dimmed?: boolean;
   draggable: boolean;
+  categories?: ProjectCategoryDTO[];
   onUpdated: (project: ProjectDTO) => void;
   onDeleted: (id: string) => void;
 }
@@ -196,6 +206,7 @@ function SortableProjectCard({
   isAdmin,
   dimmed,
   draggable,
+  categories,
   onUpdated,
   onDeleted,
 }: CardProps) {
@@ -207,6 +218,7 @@ function SortableProjectCard({
         isAdmin={isAdmin}
         dimmed={dimmed}
         draggable={false}
+        categories={categories}
         onUpdated={onUpdated}
         onDeleted={onDeleted}
       />
@@ -218,6 +230,7 @@ function SortableProjectCard({
       item={item}
       isAdmin={isAdmin}
       dimmed={dimmed}
+      categories={categories}
       onUpdated={onUpdated}
       onDeleted={onDeleted}
     />
@@ -228,6 +241,7 @@ function DraggableProjectCard({
   item,
   isAdmin,
   dimmed,
+  categories,
   onUpdated,
   onDeleted,
 }: Omit<CardProps, "draggable">) {
@@ -248,6 +262,7 @@ function DraggableProjectCard({
         isAdmin={isAdmin}
         dimmed={dimmed}
         draggable
+        categories={categories}
         dragHandle={
           <button
             type="button"
@@ -278,6 +293,7 @@ function ProjectCardShell({
   dimmed,
   draggable,
   dragHandle,
+  categories,
   onUpdated,
   onDeleted,
 }: CardProps & { dragHandle?: React.ReactNode }) {
@@ -347,6 +363,7 @@ function ProjectCardShell({
           <ProjectActionsMenu
             project={project}
             taskCount={total}
+            categories={categories}
             onUpdated={onUpdated}
             onDeleted={() => onDeleted(project.id)}
           />

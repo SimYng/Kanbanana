@@ -10,9 +10,15 @@ const UpdateInput = z
     name: z.string().min(1).max(100).optional(),
     color: z.enum(PROJECT_COLORS as [ProjectColor, ...ProjectColor[]]).optional(),
     archived: z.boolean().optional(),
+    /** 把项目移动到指定分类 */
+    categoryId: z.string().min(1).optional(),
   })
   .refine(
-    (v) => v.name !== undefined || v.color !== undefined || v.archived !== undefined,
+    (v) =>
+      v.name !== undefined ||
+      v.color !== undefined ||
+      v.archived !== undefined ||
+      v.categoryId !== undefined,
     { message: "EMPTY_UPDATE" },
   );
 
@@ -46,6 +52,15 @@ export async function PATCH(
       extra = { sortIndex: appendSortIndex(activeSiblings) };
     }
 
+    // 校验目标分类存在，避免 FK 报错带出 P2003
+    if (data.categoryId) {
+      const cat = await prisma.projectCategory.findUnique({
+        where: { id: data.categoryId },
+        select: { id: true },
+      });
+      if (!cat) return errorJson("CATEGORY_NOT_FOUND", 400);
+    }
+
     const project = await prisma.project.update({
       where: { id: params.id },
       data: { ...data, ...extra },
@@ -56,6 +71,7 @@ export async function PATCH(
       color: project.color as ProjectColor,
       archived: project.archived,
       isDefault: project.isDefault,
+      categoryId: project.categoryId,
     });
   } catch (e) {
     return handleError(e);

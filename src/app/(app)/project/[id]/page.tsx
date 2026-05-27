@@ -39,6 +39,7 @@ export default async function ProjectPage({
     color: p.color as ProjectColor,
     archived: p.archived,
     isDefault: p.isDefault,
+    categoryId: p.categoryId,
   }));
 
   const memberDtos: MemberDTO[] = members.map((m) => ({
@@ -64,6 +65,7 @@ export default async function ProjectPage({
         color: project.color as ProjectColor,
         archived: project.archived,
         isDefault: project.isDefault,
+        categoryId: project.categoryId,
       }}
       projects={projectDtos}
       projectStats={projectStats}

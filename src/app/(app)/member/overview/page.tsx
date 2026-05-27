@@ -40,6 +40,7 @@ export default async function MembersOverviewPage() {
     color: p.color as ProjectColor,
     archived: p.archived,
     isDefault: p.isDefault,
+    categoryId: p.categoryId,
   }));
 
   return (

@@ -37,9 +37,16 @@ export async function POST(req: Request) {
     if (dragged.archived || target.archived) {
       return errorJson("ARCHIVED_NOT_SORTABLE", 400);
     }
+    // 项目列表已按分类分组渲染，只允许在同分类内部拖拽；
+    // 跨分类移动请走「编辑项目」对话框，避免视觉与数据脱节。
+    if (dragged.categoryId !== target.categoryId) {
+      return errorJson("CROSS_CATEGORY_NOT_SORTABLE", 400);
+    }
 
+    // 把排序作用域收窄到「同分类 + 未归档」，
+    // 这样 sortIndex 调整只影响同一分类内部的相对顺序，分类之间互不干扰。
     const siblings = await prisma.project.findMany({
-      where: { archived: false },
+      where: { archived: false, categoryId: dragged.categoryId },
       select: { id: true, sortIndex: true },
       orderBy: { sortIndex: "asc" },
     });
@@ -62,6 +69,7 @@ export async function POST(req: Request) {
       color: p.color as ProjectColor,
       archived: p.archived,
       isDefault: p.isDefault,
+      categoryId: p.categoryId,
     });
 
     if (needsRebalance(after)) {
