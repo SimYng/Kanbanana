@@ -11,9 +11,9 @@ export default async function AppLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <NavBar />
-      <main className="container py-6">{children}</main>
+      <main className="container flex flex-1 flex-col py-6">{children}</main>
     </div>
   );
 }

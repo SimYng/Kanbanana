@@ -221,7 +221,7 @@ export function ProjectBoard({
   }, [visibleSwitcherProjects, project.id, dialogOpen, blockingTask, router]);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <Button asChild variant="ghost" size="sm">
@@ -297,12 +297,12 @@ export function ProjectBoard({
         </Card>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {columns.map((col) => {
           const theme = STATUS_THEME[col.status];
           return (
-          <Card key={col.status} className={cn("flex flex-col border-t-4", theme.top)}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <Card key={col.status} className={cn("flex h-full min-h-0 flex-col border-t-4", theme.top)}>
+            <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className={cn("flex items-center gap-2 text-sm font-medium", theme.title)}>
                 <span className={cn("inline-block h-2 w-2 rounded-full", theme.dot)} />
                 {STATUS_LABEL[col.status]}
@@ -311,7 +311,7 @@ export function ProjectBoard({
                 {col.tasks.length}
               </Badge>
             </CardHeader>
-            <CardContent className="flex-1 space-y-2 pt-0">
+            <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto pt-0">
               {col.tasks.length === 0 ? (
                 <div className="rounded border border-dashed py-4 text-center text-xs text-muted-foreground">
                   —
