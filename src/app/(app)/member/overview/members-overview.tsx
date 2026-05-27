@@ -268,9 +268,6 @@ export function MembersOverview({
           <Badge variant="muted" className="font-normal">
             {members.length} 人 · {visibleTasks.length} 个任务
           </Badge>
-          <p className="text-xs text-muted-foreground">
-            未分配 + 每人一列 · 顺序：进行中 → 阻塞 → 待办 → 已完成 · 已完成仅显示近 7 天
-          </p>
           <div className="ml-auto">
             {/* 全局入口：不预选负责人，留给弹窗下拉选；
                 每列列头还有小 + 按钮可一键预选该成员，常用于排活。 */}
