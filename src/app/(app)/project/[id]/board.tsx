@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Archive } from "lucide-react";
@@ -17,6 +17,7 @@ import { ProjectActionsMenu } from "@/components/project-actions-menu";
 import { apiFetch } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
+import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
 import {
   STATUS_LABEL,
   TASK_STATUSES,
@@ -54,6 +55,8 @@ export function ProjectBoard({
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
+  // router.refresh() 走 transition：不阻塞 UI，不打断乐观更新
+  const [, startTransition] = useTransition();
 
   // 新建任务时只允许选未归档的项目（避免给归档项目加新任务）
   const assignableProjects = useMemo(
@@ -121,11 +124,31 @@ export function ProjectBoard({
     }
   }
 
+  /**
+   * 列内排序。先做客户端乐观更新，让 dnd-kit "复位"目标就是新位置，避免
+   * 「先回原位 → API 返回后再跳到新位置」的闪烁。详见 lib/optimistic-reorder.ts。
+   */
   async function handleReorder(
     draggedId: string,
     targetId: string,
     position: "before" | "after",
   ) {
+    const optimistic = computeOptimisticReorder(
+      tasks,
+      draggedId,
+      targetId,
+      position,
+    );
+    if (optimistic) {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === draggedId
+            ? { ...t, sortIndex: optimistic.newSortIndex }
+            : t,
+        ),
+      );
+    }
+
     try {
       const res = await apiFetch<{ task: TaskDTO; rebalanced: boolean }>(
         "/api/tasks/reorder",
@@ -139,8 +162,17 @@ export function ProjectBoard({
       } else {
         patchLocal(res.task);
       }
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
+      if (optimistic) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === draggedId
+              ? { ...t, sortIndex: optimistic.rollback }
+              : t,
+          ),
+        );
+      }
       toast.error(`排序失败：${(e as Error).message}`);
     }
   }

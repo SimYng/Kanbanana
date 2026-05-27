@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Inbox, Plus } from "lucide-react";
@@ -22,6 +22,7 @@ import { apiFetch } from "@/lib/fetcher";
 import { cn, isTaskVisible } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
 import { useTaskStatusAction } from "@/lib/use-task-status-action";
+import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
 import {
   STATUS_LABEL,
   type MemberDTO,
@@ -62,6 +63,8 @@ export function MembersOverview({
   const [dialogOpen, setDialogOpen] = useState(false);
   // 「标记阻塞」需要先收集原因，单独的轻量 Dialog
   const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
+  // router.refresh() 走 transition：不阻塞 UI、不打断乐观排序
+  const [, startTransition] = useTransition();
 
   // 已完成任务只展示"近 7 天完成"的，避免历史完成堆积把列压垮。
   // 边界按日对齐（今天 00:00 往前 6 天 = 7 天前 00:00），跨天时数据不抖动。
@@ -191,13 +194,34 @@ export function MembersOverview({
 
   /**
    * 列内排序。每个成员的每种状态独立 DndContext，dnd-kit 天然只允许同 context 内拖动，
-   * 所以跨成员或跨状态的拖动直接被忽略（鼠标释放无副作用），不需要额外校验。
+   * 跨成员或跨状态的拖动直接被忽略，不需额外校验。
+   *
+   * 体验关键：drop 瞬间 dnd-kit 会把卡片"复位"到 React state 决定的位置。
+   * 如果只在 API 返回后才更新 state，会出现「先弹回原位→再跳到新位置」的闪烁。
+   * 这里用 client 端的 computeSortIndex（与后端是同一份算法）先做乐观更新，
+   * 让 dnd-kit 复位的目标就是新位置，肉眼无感。
    */
   async function handleReorder(
     draggedId: string,
     targetId: string,
     position: "before" | "after",
   ) {
+    const optimistic = computeOptimisticReorder(
+      tasks,
+      draggedId,
+      targetId,
+      position,
+    );
+    if (optimistic) {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === draggedId
+            ? { ...t, sortIndex: optimistic.newSortIndex }
+            : t,
+        ),
+      );
+    }
+
     try {
       const res = await apiFetch<{ task: TaskDTO; rebalanced: boolean }>(
         "/api/tasks/reorder",
@@ -211,8 +235,18 @@ export function MembersOverview({
       } else {
         patchLocal(res.task);
       }
-      router.refresh();
+      // router.refresh() 放到 transition：服务端重 render 期间不打断本地排序
+      startTransition(() => router.refresh());
     } catch (e) {
+      if (optimistic) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === draggedId
+              ? { ...t, sortIndex: optimistic.rollback }
+              : t,
+          ),
+        );
+      }
       toast.error(`排序失败：${(e as Error).message}`);
     }
   }

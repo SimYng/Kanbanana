@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Inbox } from "lucide-react";
@@ -39,6 +39,8 @@ export function MemberWorkbench({
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
+  // router.refresh() 走 transition：不阻塞 UI，不打断 member-kanban 的乐观更新
+  const [, startTransition] = useTransition();
 
   // 归档项目里未完成的任务视为「作废」，不在工作台展示；
   // 已完成的任务仍保留，作为历史业绩（由 MemberKanban 的"近期已完成"列承担展示）。
@@ -103,7 +105,8 @@ export function MemberWorkbench({
     }
   }
 
-  // 统一处理 Kanban 拖拽：兼容"列内排序"与"跨列切换状态"两种模式
+  // 统一处理 Kanban 拖拽：兼容"列内排序"与"跨列切换状态"两种模式。
+  // 客户端乐观 sortIndex 由 member-kanban 内部处理，这里只负责调 API + 校准。
   async function handleReorderRequest(req: ReorderRequest) {
     try {
       const res = await apiFetch<{ task: TaskDTO; rebalanced: boolean }>(
@@ -118,7 +121,7 @@ export function MemberWorkbench({
       } else {
         patchLocal(res.task);
       }
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       toast.error(`拖拽失败：${(e as Error).message}`);
       throw e;

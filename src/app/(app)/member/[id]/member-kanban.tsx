@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
+import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
 import { STATUS_LABEL, type TaskDTO, type TaskStatus } from "@/lib/types";
 
 const KANBAN_STATUSES: TaskStatus[] = ["doing", "todo", "blocked", "done"];
@@ -248,6 +249,25 @@ export function MemberKanban({
         : draggedIdxInCol < targetIdxInCol
           ? "after"
           : "before";
+
+    // 列内排序乐观更新：把 dragged 的 sortIndex 立即算好写回 localTasks，
+    // 让 dnd-kit drop 后复位的目标位置就是新位置，消除「先弹回原位再跳过去」的闪烁。
+    // 跨列的「状态切换」已由 onDragOver 实时预览，这里只关心 sortIndex。
+    const optimistic = computeOptimisticReorder(
+      localTasks,
+      activeIdStr,
+      overIdStr,
+      position,
+    );
+    if (optimistic) {
+      setLocalTasks((prev) =>
+        prev.map((t) =>
+          t.id === activeIdStr
+            ? { ...t, sortIndex: optimistic.newSortIndex }
+            : t,
+        ),
+      );
+    }
 
     try {
       await onReorderRequest({
