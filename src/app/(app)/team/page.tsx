@@ -57,9 +57,6 @@ export default async function TeamPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">团队总览</h1>
-        <p className="text-sm text-muted-foreground">
-          掌握全局 → 点「排活」进入成员工作台拖拽排序
-        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -79,9 +76,6 @@ export default async function TeamPage() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">成员手头工作量</h2>
-        <p className="text-sm text-muted-foreground">
-          按未完成任务数聚合 · 建议每人 ≤ {WORKLOAD_CAPACITY} 个
-        </p>
         <div className="space-y-2">
           {memberRows.map((w) => {
             const over = w.total > WORKLOAD_CAPACITY;
