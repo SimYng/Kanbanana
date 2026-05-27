@@ -12,6 +12,7 @@ import { BoardTaskCard } from "@/components/board-task-card";
 import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskDialog } from "@/components/task-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
+import { BlockReasonDialog } from "@/components/block-reason-dialog";
 import { ProjectActionsMenu } from "@/components/project-actions-menu";
 import { apiFetch } from "@/lib/fetcher";
 import {
@@ -21,6 +22,7 @@ import {
   type MemberDTO,
   type ProjectDTO,
   type TaskDTO,
+  type TaskStatus,
 } from "@/lib/types";
 
 interface ProjectBoardProps {
@@ -43,6 +45,7 @@ export function ProjectBoard({
   const [tasks, setTasks] = useState<TaskDTO[]>(initialTasks);
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
 
   // 新建任务时只允许选未归档的项目（避免给归档项目加新任务）
   const assignableProjects = useMemo(
@@ -72,6 +75,42 @@ export function ProjectBoard({
   async function refresh() {
     const next = await apiFetch<TaskDTO[]>(`/api/tasks?projectId=${project.id}`);
     setTasks(next);
+  }
+
+  async function handleAction(
+    taskId: string,
+    action: { kind: "status"; value: TaskStatus },
+  ) {
+    if (action.value === "blocked") {
+      const target = tasks.find((t) => t.id === taskId);
+      if (target) setBlockingTask(target);
+      return;
+    }
+    try {
+      const updated = await apiFetch<TaskDTO>(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: action.value, blockedReason: null }),
+      });
+      patchLocal(updated);
+      router.refresh();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function submitBlock(taskId: string, reason: string) {
+    try {
+      const updated = await apiFetch<TaskDTO>(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "blocked", blockedReason: reason }),
+      });
+      patchLocal(updated);
+      toast.success("已标记为阻塞");
+      router.refresh();
+    } catch (e) {
+      toast.error((e as Error).message);
+      throw e;
+    }
   }
 
   async function handleReorder(
@@ -189,6 +228,7 @@ export function ProjectBoard({
                       <BoardTaskCard
                         key={t.id}
                         task={t}
+                        onAction={handleAction}
                         onOpen={(task) => {
                           setOpenTask(task);
                           setDialogOpen(true);
@@ -221,6 +261,14 @@ export function ProjectBoard({
           setTasks((prev) => prev.filter((t) => t.id !== id));
           router.refresh();
         }}
+      />
+
+      <BlockReasonDialog
+        task={blockingTask}
+        onOpenChange={(o) => {
+          if (!o) setBlockingTask(null);
+        }}
+        onSubmit={submitBlock}
       />
     </div>
   );
