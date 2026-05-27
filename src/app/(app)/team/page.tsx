@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
-  ChevronRight,
   Inbox,
   ListTodo,
   PlayCircle,
@@ -11,7 +10,6 @@ import {
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MemberAvatar } from "@/components/member-avatar";
 import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
@@ -21,6 +19,10 @@ import {
   ProjectProgressGrid,
   type ProjectProgressItem,
 } from "./project-progress";
+import {
+  MemberWorkload,
+  type MemberWorkloadRow,
+} from "./member-workload";
 
 export const dynamic = "force-dynamic";
 
@@ -45,12 +47,12 @@ export default async function TeamPage() {
   const allTaskDtos = allTasks.map(serializeTask);
   const tasks = allTaskDtos.filter(isTaskVisible);
 
-  const memberRows = members.map((m) => {
+  const memberRows: MemberWorkloadRow[] = members.map((m) => {
     const mine = tasks.filter((t) => t.assigneeId === m.id);
     const open = mine.filter((t) => t.status !== "done");
     const doneToday = mine.filter((t) => t.status === "done" && isToday(t.completedAt)).length;
     return {
-      member: m,
+      member: { id: m.id, name: m.name },
       doingCount: open.filter((t) => t.status === "doing").length,
       todoCount: open.filter((t) => t.status === "todo").length,
       blockedCount: open.filter((t) => t.status === "blocked").length,
@@ -133,67 +135,7 @@ export default async function TeamPage() {
         />
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">成员手头工作量</h2>
-        <div className="space-y-1">
-          {memberRows.map((w) => {
-            // 进度条按未完成任务的内部结构比例铺满，不再引入"建议容量"概念
-            const denom = Math.max(w.total, 1);
-            return (
-              <Link
-                key={w.member.id}
-                href={`/member/${w.member.id}`}
-                className="group block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <Card className="cursor-pointer transition-colors group-hover:border-foreground/25 group-hover:bg-accent/30">
-                  <CardContent className="space-y-1.5 p-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <MemberAvatar name={w.member.name} />
-                      <span className="text-sm font-medium">{w.member.name}</span>
-                      <div className="flex items-baseline gap-2 text-[11px] tabular-nums">
-                        <InlineStat tone="info" label="进行" value={w.doingCount} />
-                        <InlineStat tone="muted" label="待办" value={w.todoCount} />
-                        <InlineStat
-                          tone="warn"
-                          label="阻塞"
-                          value={w.blockedCount}
-                          hideWhenZero
-                        />
-                        <InlineStat
-                          tone="success"
-                          label="今日完成"
-                          value={w.doneToday}
-                          hideWhenZero
-                        />
-                      </div>
-                      <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
-                        共 {w.total}
-                      </span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground" />
-                    </div>
-                    {w.total > 0 && (
-                      <div className="flex h-0.5 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="bg-info transition-all"
-                          style={{ width: `${(w.doingCount / denom) * 100}%` }}
-                        />
-                        <div
-                          className="bg-muted-foreground/50 transition-all"
-                          style={{ width: `${(w.todoCount / denom) * 100}%` }}
-                        />
-                        <div
-                          className="bg-warn transition-all"
-                          style={{ width: `${(w.blockedCount / denom) * 100}%` }}
-                        />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      <MemberWorkload rows={memberRows} />
 
       {blockedTasks.length > 0 && (
         <section className="space-y-3">
@@ -239,41 +181,6 @@ export default async function TeamPage() {
 
       <ProjectProgressGrid items={projectProgressItems} />
     </div>
-  );
-}
-
-// ───────────────────────── 成员行内紧凑数字 ─────────────────────────
-
-const INLINE_STAT_TONE = {
-  info: "text-info",
-  warn: "text-warn",
-  success: "text-success",
-  muted: "text-muted-foreground",
-} as const;
-
-/**
- * "·进行 3" 形式的行内小数字，配色随状态变化：
- *  - info(蓝) 进行中 / warn(橙) 阻塞 / success(绿) 今日完成 / muted(灰) 待办
- *  - hideWhenZero=true 时 0 直接不渲染，避免一排没意义的 0
- */
-function InlineStat({
-  tone,
-  label,
-  value,
-  hideWhenZero,
-}: {
-  tone: keyof typeof INLINE_STAT_TONE;
-  label: string;
-  value: number;
-  hideWhenZero?: boolean;
-}) {
-  if (hideWhenZero && value === 0) return null;
-  return (
-    <span className={cn("inline-flex items-baseline gap-0.5", INLINE_STAT_TONE[tone])}>
-      <span className="text-muted-foreground/60">·</span>
-      <span className="text-muted-foreground/80">{label}</span>
-      <span className="font-medium">{value}</span>
-    </span>
   );
 }
 
