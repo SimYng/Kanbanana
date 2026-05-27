@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Inbox } from "lucide-react";
+import { ArrowLeft, ArrowRight, Inbox, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { MemberAvatar } from "@/components/member-avatar";
 import { BoardTaskCard } from "@/components/board-task-card";
 import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskDialog } from "@/components/task-dialog";
+import { NewTaskDialog } from "@/components/new-task-dialog";
 import {
   MemberSwitcher,
   OVERVIEW_NAV_ID,
@@ -108,6 +109,12 @@ export function MembersOverview({
     });
   }
 
+  // 新建任务统一回调：顶部全局按钮 + 每列小 + 按钮都走这里
+  function handleTaskCreated(created: TaskDTO) {
+    patchLocal(created);
+    router.refresh();
+  }
+
   async function refreshAll() {
     const next = await apiFetch<TaskDTO[]>("/api/tasks");
     setTasks(next);
@@ -158,6 +165,15 @@ export function MembersOverview({
           <p className="text-xs text-muted-foreground">
             未分配 + 每人一列 · 顺序：进行中 → 阻塞 → 待办 → 已完成 · 已完成仅显示近 7 天
           </p>
+          <div className="ml-auto">
+            {/* 全局入口：不预选负责人，留给弹窗下拉选；
+                每列列头还有小 + 按钮可一键预选该成员，常用于排活。 */}
+            <NewTaskDialog
+              projects={projects.filter((p) => !p.archived)}
+              members={members}
+              onCreated={handleTaskCreated}
+            />
+          </div>
         </div>
 
         <MemberSwitcher
@@ -187,6 +203,11 @@ export function MembersOverview({
               hoverHint="进入未分配任务池"
               emptyText="没有未分配任务"
               tasks={grouped.unassigned}
+              projects={projects}
+              members={members}
+              defaultAssigneeId={undefined}
+              addTaskTooltip="新建未分配任务"
+              onTaskCreated={handleTaskCreated}
               onOpen={openTaskDialog}
               onReorder={handleReorder}
             />
@@ -199,6 +220,11 @@ export function MembersOverview({
                 hoverHint="进入该成员的工作台"
                 emptyText="手头是空的"
                 tasks={grouped.byMember.get(m.id) ?? []}
+                projects={projects}
+                members={members}
+                defaultAssigneeId={m.id}
+                addTaskTooltip={`给 ${m.name} 派活`}
+                onTaskCreated={handleTaskCreated}
                 onOpen={openTaskDialog}
                 onReorder={handleReorder}
               />
@@ -245,6 +271,14 @@ interface OverviewColumnProps {
   /** 列内无任务时的占位文案 */
   emptyText: string;
   tasks: TaskDTO[];
+  /** 新建任务弹窗用 */
+  projects: ProjectDTO[];
+  members: MemberDTO[];
+  /** undefined = 未分配；否则预选该负责人 */
+  defaultAssigneeId: string | undefined;
+  /** 列头小 + 按钮的 tooltip */
+  addTaskTooltip: string;
+  onTaskCreated: (task: TaskDTO) => void;
   onOpen: (task: TaskDTO) => void;
   onReorder: (
     draggedId: string,
@@ -260,6 +294,11 @@ function OverviewColumn({
   hoverHint,
   emptyText,
   tasks,
+  projects,
+  members,
+  defaultAssigneeId,
+  addTaskTooltip,
+  onTaskCreated,
   onOpen,
   onReorder,
 }: OverviewColumnProps) {
@@ -297,12 +336,30 @@ function OverviewColumn({
         </Link>
         {/* 任务分布合并到 header 右侧：色点 + 数字横排，0 值弱化避免噪音；
             鼠标悬停每个 chip 有 tooltip 解释（"进行中 3"）。
-            视觉上相当于既是图例又是分布 + 总数（4 数之和），省掉了独立的统计行。 */}
+            视觉上相当于既是图例又是分布 + 总数（4 数之和），省掉了独立的统计行。
+            末尾跟一个小 + 按钮，点击直接打开"新建任务"弹窗并预选本列负责人。 */}
         <div className="flex shrink-0 items-center gap-1.5 text-[11px] tabular-nums">
           <StatusCount status="doing" value={stats.doing} />
           <StatusCount status="blocked" value={stats.blocked} />
           <StatusCount status="todo" value={stats.todo} />
           <StatusCount status="done" value={stats.done} />
+          <NewTaskDialog
+            projects={projects.filter((p) => !p.archived)}
+            members={members}
+            defaultAssigneeId={defaultAssigneeId}
+            onCreated={onTaskCreated}
+            triggerNode={
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={addTaskTooltip}
+                title={addTaskTooltip}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            }
+          />
         </div>
       </CardHeader>
 

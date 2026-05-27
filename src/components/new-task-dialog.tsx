@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -40,6 +40,9 @@ interface NewTaskDialogProps {
   defaultAssigneeId?: string;
   onCreated?: (task: TaskDTO) => void;
   triggerLabel?: string;
+  /** 自定义触发器元素：必须是单个可作为 Radix DialogTrigger asChild 子节点的 ReactElement。
+   *  传入则替换默认的 + 文案按钮，便于在列头放小 icon 按钮等场景。 */
+  triggerNode?: ReactElement;
 }
 
 export function NewTaskDialog({
@@ -49,6 +52,7 @@ export function NewTaskDialog({
   defaultAssigneeId,
   onCreated,
   triggerLabel = "新建任务",
+  triggerNode,
 }: NewTaskDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -109,10 +113,12 @@ export function NewTaskDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="default">
-          <Plus className="h-4 w-4" />
-          {triggerLabel}
-        </Button>
+        {triggerNode ?? (
+          <Button size="sm" variant="default">
+            <Plus className="h-4 w-4" />
+            {triggerLabel}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
