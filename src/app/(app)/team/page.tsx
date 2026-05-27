@@ -8,7 +8,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
@@ -23,6 +23,7 @@ import {
   MemberWorkload,
   type MemberWorkloadRow,
 } from "./member-workload";
+import { PanelHeader } from "./panel-header";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,22 @@ export default async function TeamPage() {
         />
       </div>
 
-      <MemberWorkload rows={memberRows} />
+      {/*
+        以成员 panel 高度为基准，项目 panel 超出滚动的核心技巧：
+         - 外层 grid 默认 stretch + row 高度 = max(子项内容高度)
+         - 把项目 panel 装进 relative 容器内的 absolute 子元素 → 它脱离 row 高度
+           计算（intrinsic height 视为 0），row 高度因此完全由 MemberWorkload 决定
+         - 然后 absolute inset-0 让项目 panel 撑满 row（即成员高度），内部滚动
+         - 小屏 (< xl) 单列堆叠时不启用 relative/absolute，恢复自然文档流
+      */}
+      <div className="grid gap-3 xl:grid-cols-2">
+        <MemberWorkload rows={memberRows} />
+        <div className="xl:relative">
+          <div className="xl:absolute xl:inset-0 xl:flex">
+            <ProjectProgressGrid items={projectProgressItems} />
+          </div>
+        </div>
+      </div>
 
       {blockedTasks.length > 0 && (
         <section className="space-y-3">
@@ -178,8 +194,6 @@ export default async function TeamPage() {
           </div>
         </section>
       )}
-
-      <ProjectProgressGrid items={projectProgressItems} />
     </div>
   );
 }
@@ -212,35 +226,6 @@ function WorkloadSummary({
   );
 }
 
-/**
- * 顶部 3 列共用的卡片表头：粗体标题 + 底边线分隔，避免与下方子项标题混淆
- */
-function PanelHeader({
-  icon: Icon,
-  title,
-  subtitle,
-  rightSlot,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  subtitle?: string;
-  rightSlot?: React.ReactNode;
-}) {
-  return (
-    <CardHeader className="flex-row items-center justify-between space-y-0 border-b pb-3">
-      <CardTitle className="flex items-baseline gap-2 text-sm font-semibold text-foreground">
-        <Icon className="h-4 w-4 self-center text-muted-foreground" />
-        {title}
-        {subtitle && (
-          <span className="text-[11px] font-normal text-muted-foreground/70">
-            · {subtitle}
-          </span>
-        )}
-      </CardTitle>
-      {rightSlot}
-    </CardHeader>
-  );
-}
 
 const TONE_TEXT = {
   info: "text-info",

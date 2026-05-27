@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, FolderKanban } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PROJECT_COLOR_HEX, type ProjectColor } from "@/lib/types";
+import { PanelHeader } from "./panel-header";
 
 export interface ProjectProgressItem {
   id: string;
@@ -73,53 +74,60 @@ export function ProjectProgressGrid({
   const sorted = useMemo(() => sortItems(items, sort), [items, sort]);
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">项目进度</h2>
-        <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
-          <SelectTrigger className="h-8 w-[160px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-          没有活跃项目
-        </div>
-      ) : (
-        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {sorted.map((p) => (
-            <ProgressCard key={p.id} item={p} />
-          ))}
-        </div>
-      )}
-    </section>
+    // xl:flex-1 + xl:min-h-0 配合 page.tsx 的 absolute wrapper：
+    //  - flex-1 占满 wrapper 宽高（wrapper 是 xl:flex）
+    //  - min-h-0 让 Card 允许收缩到 wrapper 高度以下，从而 CardContent 的
+    //    flex-1 + overflow-y-auto 才能在 xl 屏正确生效（否则内容会撑破）
+    <Card className="flex w-full flex-col xl:min-h-0 xl:flex-1">
+      <PanelHeader
+        icon={FolderKanban}
+        title="项目进度"
+        rightSlot={
+          <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
+      {/* 项目 panel 受 grid stretch 拉到与成员同高，超出部分在 CardContent 内滚动；
+          min-h-0 是 flex 子项允许收缩到内容以下的必需配合，否则 overflow 不会生效 */}
+      <CardContent className="min-h-0 flex-1 divide-y overflow-y-auto p-0">
+        {items.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            没有活跃项目
+          </div>
+        ) : (
+          sorted.map((p) => <ProgressRow key={p.id} item={p} />)
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
-function ProgressCard({ item }: { item: ProjectProgressItem }) {
+function ProgressRow({ item }: { item: ProjectProgressItem }) {
   const hex = PROJECT_COLOR_HEX[item.color];
   return (
-    <Card className="transition-colors hover:border-foreground/20">
-      <CardContent className="space-y-1.5 p-3">
+    <Link
+      href={`/project/${item.id}`}
+      className="group block outline-none focus-visible:bg-accent/40"
+    >
+      <div className="space-y-1.5 px-3 py-2 transition-colors group-hover:bg-accent/40">
         <div className="flex items-center gap-2">
           <span
             className="inline-block h-2 w-2 shrink-0 rounded-full"
             style={{ background: hex }}
           />
-          <Link
-            href={`/project/${item.id}`}
-            className="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
-          >
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
             {item.name}
-          </Link>
+          </span>
           {item.blockedCount > 0 && (
             <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] tabular-nums text-warn">
               <AlertTriangle className="h-3 w-3" />
@@ -139,7 +147,7 @@ function ProgressCard({ item }: { item: ProjectProgressItem }) {
             style={{ width: `${item.pct}%`, background: hex }}
           />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Link>
   );
 }

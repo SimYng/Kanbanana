@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MemberAvatar } from "@/components/member-avatar";
 import {
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { PanelHeader } from "./panel-header";
 
 export interface MemberWorkloadRow {
   member: { id: string; name: string };
@@ -66,34 +67,36 @@ export function MemberWorkload({ rows }: { rows: MemberWorkloadRow[] }) {
   const sorted = useMemo(() => sortRows(rows, sort), [rows, sort]);
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">成员手头工作量</h2>
-        <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
-          <SelectTrigger className="h-8 w-[160px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-          还没有成员
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {sorted.map((w) => (
-            <MemberRow key={w.member.id} row={w} />
-          ))}
-        </div>
-      )}
-    </section>
+    <Card className="flex flex-col">
+      <PanelHeader
+        icon={Users}
+        title="成员手头工作量"
+        rightSlot={
+          <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
+      {/* 成员 panel 不限高：高度自然撑开，作为整行 grid 的基准 */}
+      <CardContent className="divide-y p-0">
+        {rows.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            还没有成员
+          </div>
+        ) : (
+          sorted.map((w) => <MemberRow key={w.member.id} row={w} />)
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -103,52 +106,50 @@ function MemberRow({ row: w }: { row: MemberWorkloadRow }) {
   return (
     <Link
       href={`/member/${w.member.id}`}
-      className="group block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="group block outline-none focus-visible:bg-accent/40"
     >
-      <Card className="cursor-pointer transition-colors group-hover:border-foreground/25 group-hover:bg-accent/30">
-        <CardContent className="space-y-1.5 p-2.5">
-          <div className="flex items-center gap-2.5">
-            <MemberAvatar name={w.member.name} />
-            <span className="text-sm font-medium">{w.member.name}</span>
-            <div className="flex items-baseline gap-2 text-[11px] tabular-nums">
-              <InlineStat tone="info" label="进行" value={w.doingCount} />
-              <InlineStat tone="muted" label="待办" value={w.todoCount} />
-              <InlineStat
-                tone="warn"
-                label="阻塞"
-                value={w.blockedCount}
-                hideWhenZero
-              />
-              <InlineStat
-                tone="success"
-                label="今日完成"
-                value={w.doneToday}
-                hideWhenZero
-              />
-            </div>
-            <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
-              共 {w.total}
-            </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground" />
+      <div className="space-y-1.5 px-3 py-2 transition-colors group-hover:bg-accent/40">
+        <div className="flex items-center gap-2.5">
+          <MemberAvatar name={w.member.name} />
+          <span className="text-sm font-medium">{w.member.name}</span>
+          <div className="flex items-baseline gap-2 text-[11px] tabular-nums">
+            <InlineStat tone="info" label="进行" value={w.doingCount} />
+            <InlineStat tone="muted" label="待办" value={w.todoCount} />
+            <InlineStat
+              tone="warn"
+              label="阻塞"
+              value={w.blockedCount}
+              hideWhenZero
+            />
+            <InlineStat
+              tone="success"
+              label="今日完成"
+              value={w.doneToday}
+              hideWhenZero
+            />
           </div>
-          {w.total > 0 && (
-            <div className="flex h-0.5 overflow-hidden rounded-full bg-muted">
-              <div
-                className="bg-info transition-all"
-                style={{ width: `${(w.doingCount / denom) * 100}%` }}
-              />
-              <div
-                className="bg-muted-foreground/50 transition-all"
-                style={{ width: `${(w.todoCount / denom) * 100}%` }}
-              />
-              <div
-                className="bg-warn transition-all"
-                style={{ width: `${(w.blockedCount / denom) * 100}%` }}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <span className="ml-auto text-sm font-medium tabular-nums text-muted-foreground">
+            共 {w.total}
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground" />
+        </div>
+        {w.total > 0 && (
+          <div className="flex h-0.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className="bg-info transition-all"
+              style={{ width: `${(w.doingCount / denom) * 100}%` }}
+            />
+            <div
+              className="bg-muted-foreground/50 transition-all"
+              style={{ width: `${(w.todoCount / denom) * 100}%` }}
+            />
+            <div
+              className="bg-warn transition-all"
+              style={{ width: `${(w.blockedCount / denom) * 100}%` }}
+            />
+          </div>
+        )}
+      </div>
     </Link>
   );
 }
