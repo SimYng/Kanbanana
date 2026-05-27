@@ -102,7 +102,9 @@ export function BoardTaskCard({
       className={cn(
         // hover 效果用 shadow + 轻微抬起，避免 `hover:border-*` 覆盖
         // 左侧 border-l 的状态色条（会让卡片在 hover 时被误以为变成"待办"灰）
-        "group cursor-pointer transition-all hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-foreground/10",
+        // select-none：拖动卡片时浏览器默认会触发文本选择（看图里的蓝色 highlight），
+        // 整张卡片禁掉文本选择；要复制标题 / 项目名时点击进详情 dialog 操作
+        "group cursor-pointer select-none transition-all hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-foreground/10",
         showStatusBar && cn("border-l-[3px]", STATUS_BORDER[task.status]),
         isDragging && "opacity-40 ring-2 ring-primary",
       )}
