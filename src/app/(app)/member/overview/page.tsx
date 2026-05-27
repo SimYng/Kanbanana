@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
-import type { MemberDTO, ProjectDTO } from "@/lib/types";
+import type { MemberDTO, ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
 import { MembersOverview } from "./members-overview";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +12,16 @@ export const dynamic = "force-dynamic";
  * 因此与 /member/[id] 共存不会冲突。
  */
 export default async function MembersOverviewPage() {
-  const [members, projects, tasks] = await Promise.all([
+  const [members, projects, categoriesRaw, tasks] = await Promise.all([
     prisma.user.findMany({
       where: { role: "member" },
       orderBy: { createdAt: "asc" },
     }),
     prisma.project.findMany({
       orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
+    }),
+    prisma.projectCategory.findMany({
+      orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
     }),
     // 同时拉取「已分配」和「未分配」任务：未分配单独成一列展示
     prisma.task.findMany({
@@ -42,10 +45,18 @@ export default async function MembersOverviewPage() {
     categoryId: p.categoryId,
   }));
 
+  const categoryDtos: ProjectCategoryDTO[] = categoriesRaw.map((c) => ({
+    id: c.id,
+    name: c.name,
+    isDefault: c.isDefault,
+    sortIndex: c.sortIndex,
+  }));
+
   return (
     <MembersOverview
       members={memberDtos}
       projects={projectDtos}
+      categories={categoryDtos}
       initialTasks={tasks.map(serializeTask)}
     />
   );

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
-import type { MemberDTO, ProjectDTO } from "@/lib/types";
+import type { MemberDTO, ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
 import { MemberWorkbench } from "../[id]/workbench";
 
 export const dynamic = "force-dynamic";
@@ -13,13 +13,16 @@ export const dynamic = "force-dynamic";
  * 因此与 /member/[id] 共存不会冲突（同 /member/overview 套路）。
  */
 export default async function UnassignedPage() {
-  const [allMembers, projects, tasks] = await Promise.all([
+  const [allMembers, projects, categoriesRaw, tasks] = await Promise.all([
     prisma.user.findMany({
       where: { role: "member" },
       orderBy: { createdAt: "asc" },
     }),
     prisma.project.findMany({
       orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
+    }),
+    prisma.projectCategory.findMany({
+      orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
     }),
     prisma.task.findMany({
       where: { assigneeId: null },
@@ -43,11 +46,19 @@ export default async function UnassignedPage() {
     categoryId: p.categoryId,
   }));
 
+  const categoryDtos: ProjectCategoryDTO[] = categoriesRaw.map((c) => ({
+    id: c.id,
+    name: c.name,
+    isDefault: c.isDefault,
+    sortIndex: c.sortIndex,
+  }));
+
   return (
     <MemberWorkbench
       member={null}
       allMembers={memberDtos}
       projects={projectDtos}
+      categories={categoryDtos}
       initialTasks={tasks.map(serializeTask)}
     />
   );

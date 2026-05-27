@@ -22,6 +22,7 @@ import {
   STATUS_LABEL,
   TASK_STATUSES,
   type MemberDTO,
+  type ProjectCategoryDTO,
   type ProjectDTO,
   type TaskDTO,
   type TaskStatus,
@@ -32,6 +33,7 @@ type ProjectStat = { todo: number; doing: number; blocked: number };
 interface ProjectBoardProps {
   project: ProjectDTO;
   projects: ProjectDTO[];
+  categories: ProjectCategoryDTO[];
   /** 全部项目按状态聚合的任务数，用于顶部切换栏 chip 角标 */
   projectStats: Record<string, ProjectStat>;
   members: MemberDTO[];
@@ -44,6 +46,7 @@ const EMPTY_STAT: ProjectStat = { todo: 0, doing: 0, blocked: 0 };
 export function ProjectBoard({
   project: initialProject,
   projects,
+  categories,
   projectStats,
   members,
   initialTasks,
@@ -250,6 +253,7 @@ export function ProjectBoard({
             <NewTaskDialog
               projects={assignableProjects}
               members={members}
+              categories={categories}
               defaultProjectId={project.id}
               onCreated={(created) => {
                 patchLocal(created);

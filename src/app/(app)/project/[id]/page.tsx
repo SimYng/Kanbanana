@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
-import type { MemberDTO, ProjectDTO } from "@/lib/types";
+import type { MemberDTO, ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
 import { ProjectBoard } from "./board";
 
 export const dynamic = "force-dynamic";
@@ -12,24 +12,28 @@ export default async function ProjectPage({
 }: {
   params: { id: string };
 }) {
-  const [user, project, projects, members, tasks, taskCounts] = await Promise.all([
-    getCurrentUser(),
-    prisma.project.findUnique({ where: { id: params.id } }),
-    prisma.project.findMany({
-      orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
-    }),
-    prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.task.findMany({
-      where: { projectId: params.id },
-      include: TASK_INCLUDE,
-      orderBy: { sortIndex: "asc" },
-    }),
-    // 顶部项目切换栏每个 chip 需要 todo/doing/blocked 计数，一次性聚合
-    prisma.task.groupBy({
-      by: ["projectId", "status"],
-      _count: { _all: true },
-    }),
-  ]);
+  const [user, project, projects, categoriesRaw, members, tasks, taskCounts] =
+    await Promise.all([
+      getCurrentUser(),
+      prisma.project.findUnique({ where: { id: params.id } }),
+      prisma.project.findMany({
+        orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
+      }),
+      prisma.projectCategory.findMany({
+        orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
+      }),
+      prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
+      prisma.task.findMany({
+        where: { projectId: params.id },
+        include: TASK_INCLUDE,
+        orderBy: { sortIndex: "asc" },
+      }),
+      // 顶部项目切换栏每个 chip 需要 todo/doing/blocked 计数，一次性聚合
+      prisma.task.groupBy({
+        by: ["projectId", "status"],
+        _count: { _all: true },
+      }),
+    ]);
 
   if (!project) notFound();
 
@@ -39,6 +43,13 @@ export default async function ProjectPage({
     archived: p.archived,
     isDefault: p.isDefault,
     categoryId: p.categoryId,
+  }));
+
+  const categoryDtos: ProjectCategoryDTO[] = categoriesRaw.map((c) => ({
+    id: c.id,
+    name: c.name,
+    isDefault: c.isDefault,
+    sortIndex: c.sortIndex,
   }));
 
   const memberDtos: MemberDTO[] = members.map((m) => ({
@@ -66,6 +77,7 @@ export default async function ProjectPage({
         categoryId: project.categoryId,
       }}
       projects={projectDtos}
+      categories={categoryDtos}
       projectStats={projectStats}
       members={memberDtos}
       initialTasks={tasks.map(serializeTask)}

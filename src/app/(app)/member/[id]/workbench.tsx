@@ -18,13 +18,14 @@ import {
 import { MemberKanban, type ReorderRequest } from "./member-kanban";
 import { apiFetch } from "@/lib/fetcher";
 import { isTaskVisible } from "@/lib/utils";
-import { type MemberDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
+import { type MemberDTO, type ProjectCategoryDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
 
 interface WorkbenchProps {
   /** null 表示「未分配池」视图：展示所有 assigneeId IS NULL 的任务 */
   member: MemberDTO | null;
   allMembers: MemberDTO[];
   projects: ProjectDTO[];
+  categories: ProjectCategoryDTO[];
   initialTasks: TaskDTO[];
 }
 
@@ -32,6 +33,7 @@ export function MemberWorkbench({
   member,
   allMembers,
   projects,
+  categories,
   initialTasks,
 }: WorkbenchProps) {
   const router = useRouter();
@@ -168,6 +170,7 @@ export function MemberWorkbench({
             <NewTaskDialog
               projects={projects.filter((p) => !p.archived)}
               members={allMembers}
+              categories={categories}
               defaultAssigneeId={ownerId ?? undefined}
               onCreated={(created) => {
                 patchLocal(created);

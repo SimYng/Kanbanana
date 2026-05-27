@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -18,7 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -28,6 +30,7 @@ import { apiFetch } from "@/lib/fetcher";
 import { localDateToIso } from "@/lib/utils";
 import type {
   MemberDTO,
+  ProjectCategoryDTO,
   ProjectDTO,
   TaskDTO,
 } from "@/lib/types";
@@ -35,6 +38,8 @@ import type {
 interface NewTaskDialogProps {
   projects: ProjectDTO[];
   members: MemberDTO[];
+  /** 传入则把项目下拉按分类分组渲染；不传 → 退化为扁平列表（向后兼容） */
+  categories?: ProjectCategoryDTO[];
   defaultProjectId?: string;
   defaultAssigneeId?: string;
   onCreated?: (task: TaskDTO) => void;
@@ -50,6 +55,7 @@ interface NewTaskDialogProps {
 export function NewTaskDialog({
   projects,
   members,
+  categories,
   defaultProjectId,
   defaultAssigneeId,
   onCreated,
@@ -101,6 +107,28 @@ export function NewTaskDialog({
     );
     setProjectId(p.id);
   }
+
+  /**
+   * 按 categories.sortIndex 分组 localProjects；分类不在 categories 列表里的
+   * 兜底归到「未分类」组，避免数据错位时下拉里漏掉项目。
+   * categories 未传时返回 null，组件退化为扁平渲染。
+   */
+  const grouped = useMemo(() => {
+    if (!categories || categories.length === 0) return null;
+    const byCat = new Map<string, ProjectDTO[]>();
+    for (const c of categories) byCat.set(c.id, []);
+    const orphans: ProjectDTO[] = [];
+    for (const p of localProjects) {
+      const bucket = byCat.get(p.categoryId);
+      if (bucket) bucket.push(p);
+      else orphans.push(p);
+    }
+    const sortedGroups = [...categories]
+      .sort((a, b) => a.sortIndex - b.sortIndex)
+      .map((c) => ({ category: c, projects: byCat.get(c.id) ?? [] }))
+      .filter((g) => g.projects.length > 0);
+    return { groups: sortedGroups, orphans };
+  }, [localProjects, categories]);
   function handleMemberCreated(m: MemberDTO) {
     setLocalMembers((prev) =>
       prev.some((x) => x.id === m.id) ? prev : [...prev, m],
@@ -176,11 +204,42 @@ export function NewTaskDialog({
                     <SelectValue placeholder="选择项目" />
                   </SelectTrigger>
                   <SelectContent>
-                    {localProjects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    {grouped ? (
+                      <>
+                        {grouped.groups.map((g) => (
+                          <SelectGroup key={g.category.id}>
+                            <SelectLabel className="text-[11px] font-medium text-muted-foreground">
+                              {g.category.name}
+                            </SelectLabel>
+                            {g.projects.map((p) => (
+                              // pl-5 让项目名相对 SelectLabel(pl-2) 缩进 12px，
+                              // 视觉上一眼看出「分类→项目」的从属层级
+                              <SelectItem key={p.id} value={p.id} className="pl-5">
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))}
+                        {grouped.orphans.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel className="text-[11px] font-medium text-muted-foreground">
+                              未分类
+                            </SelectLabel>
+                            {grouped.orphans.map((p) => (
+                              <SelectItem key={p.id} value={p.id} className="pl-5">
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                      </>
+                    ) : (
+                      localProjects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {allowCreateRelated && (

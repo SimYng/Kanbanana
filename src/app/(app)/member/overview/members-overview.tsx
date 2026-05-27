@@ -26,6 +26,7 @@ import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
 import {
   STATUS_LABEL,
   type MemberDTO,
+  type ProjectCategoryDTO,
   type ProjectDTO,
   type TaskDTO,
   type TaskStatus,
@@ -49,12 +50,14 @@ const STATUS_ORDER: Record<TaskStatus, number> = {
 interface MembersOverviewProps {
   members: MemberDTO[];
   projects: ProjectDTO[];
+  categories: ProjectCategoryDTO[];
   initialTasks: TaskDTO[];
 }
 
 export function MembersOverview({
   members,
   projects,
+  categories,
   initialTasks,
 }: MembersOverviewProps) {
   const router = useRouter();
@@ -274,6 +277,7 @@ export function MembersOverview({
             <NewTaskDialog
               projects={projects.filter((p) => !p.archived)}
               members={members}
+              categories={categories}
               onCreated={handleTaskCreated}
               allowCreateRelated
             />
@@ -305,6 +309,7 @@ export function MembersOverview({
                 tasks={grouped.byMember.get(m.id) ?? []}
                 projects={projects}
                 members={members}
+                categories={categories}
                 defaultAssigneeId={m.id}
                 addTaskTooltip={`给 ${m.name} 派活`}
                 onTaskCreated={handleTaskCreated}
@@ -328,6 +333,7 @@ export function MembersOverview({
               tasks={grouped.unassigned}
               projects={projects}
               members={members}
+              categories={categories}
               defaultAssigneeId={undefined}
               addTaskTooltip="新建未分配任务"
               onTaskCreated={handleTaskCreated}
@@ -388,6 +394,7 @@ interface OverviewColumnProps {
   /** 新建任务弹窗用 */
   projects: ProjectDTO[];
   members: MemberDTO[];
+  categories: ProjectCategoryDTO[];
   /** undefined = 未分配；否则预选该负责人 */
   defaultAssigneeId: string | undefined;
   /** 列头小 + 按钮的 tooltip */
@@ -415,6 +422,7 @@ function OverviewColumn({
   tasks,
   projects,
   members,
+  categories,
   defaultAssigneeId,
   addTaskTooltip,
   onTaskCreated,
@@ -466,6 +474,7 @@ function OverviewColumn({
           <NewTaskDialog
             projects={projects.filter((p) => !p.archived)}
             members={members}
+            categories={categories}
             defaultAssigneeId={defaultAssigneeId}
             onCreated={onTaskCreated}
             allowCreateRelated
