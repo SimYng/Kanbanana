@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Users, FolderKanban, LogOut, UserCog } from "lucide-react";
+import { Users, FolderKanban, LayoutGrid, LogOut, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MemberAvatar } from "@/components/member-avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -20,6 +20,9 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { href: "/team", label: "团队总览", icon: Users },
+  // href 用 /member 让 active 前缀匹配覆盖 overview / unassigned / [id]；
+  // 实际目标是 overview，由 src/app/(app)/member/page.tsx 重定向过去。
+  { href: "/member", label: "成员任务", icon: LayoutGrid },
   { href: "/projects", label: "项目看板", icon: FolderKanban },
 ];
 
