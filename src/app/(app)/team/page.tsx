@@ -9,8 +9,7 @@ import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
 import { isTaskVisible, isToday } from "@/lib/utils";
-import { WORKLOAD_CAPACITY, type ProjectColor } from "@/lib/types";
-import { PROJECT_COLOR_HEX } from "@/lib/types";
+import { PROJECT_COLOR_HEX, type ProjectColor } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -78,8 +77,8 @@ export default async function TeamPage() {
         <h2 className="text-lg font-semibold">成员手头工作量</h2>
         <div className="space-y-2">
           {memberRows.map((w) => {
-            const over = w.total > WORKLOAD_CAPACITY;
-            const total = Math.max(WORKLOAD_CAPACITY, w.total);
+            // 进度条按未完成任务的内部结构比例铺满，不再引入"建议容量"概念
+            const denom = Math.max(w.total, 1);
             return (
               <Card key={w.member.id}>
                 <CardContent className="space-y-2 p-4">
@@ -93,14 +92,9 @@ export default async function TeamPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`text-sm font-medium ${
-                          over ? "text-warn" : "text-muted-foreground"
-                        }`}
-                      >
-                        {w.total} / {WORKLOAD_CAPACITY}
+                      <span className="text-sm font-medium tabular-nums text-muted-foreground">
+                        共 {w.total}
                       </span>
-                      {over && <Badge variant="warn">超载</Badge>}
                       {w.blockedCount > 0 && (
                         <Badge variant="warn" className="font-normal">
                           阻塞 ×{w.blockedCount}
@@ -114,20 +108,22 @@ export default async function TeamPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="bg-info transition-all"
-                      style={{ width: `${(w.doingCount / total) * 100}%` }}
-                    />
-                    <div
-                      className="bg-muted-foreground/50 transition-all"
-                      style={{ width: `${(w.todoCount / total) * 100}%` }}
-                    />
-                    <div
-                      className="bg-warn transition-all"
-                      style={{ width: `${(w.blockedCount / total) * 100}%` }}
-                    />
-                  </div>
+                  {w.total > 0 && (
+                    <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="bg-info transition-all"
+                        style={{ width: `${(w.doingCount / denom) * 100}%` }}
+                      />
+                      <div
+                        className="bg-muted-foreground/50 transition-all"
+                        style={{ width: `${(w.todoCount / denom) * 100}%` }}
+                      />
+                      <div
+                        className="bg-warn transition-all"
+                        style={{ width: `${(w.blockedCount / denom) * 100}%` }}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

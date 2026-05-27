@@ -23,7 +23,7 @@ import { NewTaskDialog } from "@/components/new-task-dialog";
 import { BlockReasonDialog } from "@/components/block-reason-dialog";
 import { apiFetch } from "@/lib/fetcher";
 import { isTaskVisible, isToday } from "@/lib/utils";
-import { WIP_LIMIT, type MemberDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
+import { type MemberDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
 
 interface WorkbenchProps {
   member: MemberDTO;
@@ -57,8 +57,6 @@ export function MemberWorkbench({
       doneToday: doneAll.filter((t) => isToday(t.updatedAt)),
     };
   }, [tasks]);
-
-  const overWip = doing.length > WIP_LIMIT;
 
   async function refresh() {
     const next = await apiFetch<TaskDTO[]>(`/api/tasks?assigneeId=${member.id}`);
@@ -180,9 +178,9 @@ export function MemberWorkbench({
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat
-          label={`进行中 (WIP ≤ ${WIP_LIMIT})`}
+          label="进行中"
           value={doing.length}
-          tone={overWip ? "warn" : doing.length > 0 ? "info" : undefined}
+          tone={doing.length > 0 ? "info" : undefined}
           icon={PlayCircle}
         />
         <Stat label="待办" value={todo.length} icon={Inbox} />
@@ -194,21 +192,6 @@ export function MemberWorkbench({
         />
         <Stat label="今日已完成" value={doneToday.length} tone="success" icon={CheckCircle2} />
       </div>
-
-      {overWip && (
-        <Card className="border-warn/40 bg-warn/5">
-          <CardContent className="flex items-start gap-3 p-4 text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 text-warn" />
-            <div>
-              <div className="font-medium">同时进行的任务过多</div>
-              <div className="text-muted-foreground">
-                {member.name} 当前有 {doing.length} 个任务处于"进行中"，超过建议上限 {WIP_LIMIT}。
-                建议先完成或暂停部分任务，避免上下文切换损耗。
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Section
         title="进行中"

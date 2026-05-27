@@ -47,9 +47,6 @@ export const PROJECT_COLOR_HEX: Record<ProjectColor, string> = {
   gray: "#737373",
 };
 
-export const WIP_LIMIT = 2;
-export const WORKLOAD_CAPACITY = 6;
-
 export interface TaskDTO {
   id: string;
   title: string;
