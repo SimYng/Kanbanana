@@ -115,3 +115,20 @@ model YuqueLink {
 
   @@index([taskId])
 }
+
+/// 任务状态的日级快照。team page 的「进行中 / 阻塞 / 待办」需要历史趋势，
+/// 而这些是当前状态字段、本身不可回放；所以每次访问 /team 时 upsert 当天一条，
+/// 累积形成 sparkline 数据。
+///
+/// 设计要点：
+///  - `date` 用本地零点对齐（new Date(y, m, d)），既是主键也是查询索引
+///  - 没有 cron 框架，依赖访问触发；某天没人访问就缺一条，前端做插值补齐
+///  - 字段只保留 4 个状态计数；不耦合 user / project 维度，保持表小、写入快
+model DailyStatusSnapshot {
+  date      DateTime @id
+  doing     Int      @default(0)
+  blocked   Int      @default(0)
+  todo      Int      @default(0)
+  done      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}

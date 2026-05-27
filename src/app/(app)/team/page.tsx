@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  CalendarClock,
   CalendarDays,
   CheckCircle2,
   Inbox,
@@ -11,7 +12,9 @@ import { prisma } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProjectPill } from "@/components/project-pill";
+import { Sparkline } from "@/components/sparkline";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
+import { getStatusSeries, upsertTodayStatusSnapshot } from "@/lib/snapshot";
 import { cn, formatDueLabel, isTaskVisible, isToday } from "@/lib/utils";
 import type { TaskDTO } from "@/lib/types";
 import {
@@ -71,6 +74,25 @@ export default async function TeamPage() {
     todo: openTasks.filter((t) => t.status === "todo").length,
   };
 
+  // 「懒触发」每日快照：每次访问 /team 都 upsert 一条今天的快照，
+  // 用于累积 doing / blocked / todo 的近期趋势 sparkline。
+  // 没有 cron 框架，依赖访问触发；故障容忍度高，写挂掉也不影响渲染。
+  const SNAPSHOT_WINDOW = 7;
+  const doneTodayForSnapshot = allTaskDtos.filter(
+    (t) => t.status === "done" && isToday(t.completedAt),
+  ).length;
+  try {
+    await upsertTodayStatusSnapshot({
+      doing: overall.doing,
+      blocked: overall.blocked,
+      todo: overall.todo,
+      done: doneTodayForSnapshot,
+    });
+  } catch {
+    // 静默失败：快照只是趋势辅助，挂了也不影响主页渲染
+  }
+  const statusSeries = await getStatusSeries(SNAPSHOT_WINDOW);
+
   // 时间边界（本地时区，按"天"对齐）
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -86,6 +108,44 @@ export default async function TeamPage() {
 
   const todayGroups = groupByDay(todayPool, todayStart, tomorrowStart);
   const weekGroups = groupByDay(weekPool, todayStart, tomorrowStart);
+
+  // 时间序列：按日聚合，给「工作量分布」的两个指标画 sparkline。
+  // 进行中 / 阻塞 / 待办没有日级历史快照（要做需要新建 TaskActivity 表 + 定时任务），
+  // 目前只为「今日完成」「未来 7 天截止」算真实趋势。
+  const COMPLETED_WINDOW = 7;
+  const completedSeries: number[] = [];
+  for (let i = COMPLETED_WINDOW - 1; i >= 0; i--) {
+    const dayStart = new Date(todayStart);
+    dayStart.setDate(dayStart.getDate() - i);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    const count = allTaskDtos.filter(
+      (t) =>
+        t.completedAt &&
+        new Date(t.completedAt) >= dayStart &&
+        new Date(t.completedAt) < dayEnd,
+    ).length;
+    completedSeries.push(count);
+  }
+  const doneTodayCount = completedSeries[completedSeries.length - 1];
+
+  const DUE_WINDOW = 7;
+  const dueSeries: number[] = [];
+  for (let i = 0; i < DUE_WINDOW; i++) {
+    const dayStart = new Date(todayStart);
+    dayStart.setDate(dayStart.getDate() + i);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    const count = openTasks.filter(
+      (t) =>
+        t.dueDate &&
+        new Date(t.dueDate) >= dayStart &&
+        new Date(t.dueDate) < dayEnd,
+    ).length;
+    dueSeries.push(count);
+  }
+  // 未来 7 天截止总数（不含逾期，更适合作为"前瞻"指标）
+  const dueWeekCount = dueSeries.reduce((a, b) => a + b, 0);
 
   // 项目进度数据：保持 server 端 sortIndex 顺序作为"手动排序"默认值
   const projectProgressItems: ProjectProgressItem[] = projects.map((p) => {
@@ -115,6 +175,13 @@ export default async function TeamPage() {
           doing={overall.doing}
           blocked={overall.blocked}
           todo={overall.todo}
+          doneToday={doneTodayCount}
+          completedSeries={completedSeries}
+          dueWeek={dueWeekCount}
+          dueSeries={dueSeries}
+          doingSeries={statusSeries.doing}
+          blockedSeries={statusSeries.blocked}
+          todoSeries={statusSeries.todo}
         />
         <PreviewPanel
           icon={CalendarDays}
@@ -198,23 +265,71 @@ function WorkloadSummary({
   doing,
   blocked,
   todo,
+  doneToday,
+  completedSeries,
+  dueWeek,
+  dueSeries,
+  doingSeries,
+  blockedSeries,
+  todoSeries,
 }: {
   doing: number;
   blocked: number;
   todo: number;
+  doneToday: number;
+  /** 过去 7 天每日完成数（含今天） */
+  completedSeries: number[];
+  dueWeek: number;
+  /** 未来 7 天每日截止数（不含逾期） */
+  dueSeries: number[];
+  /** 来自 DailyStatusSnapshot 的近 7 天序列；点数太少时上层会传 undefined */
+  doingSeries?: number[];
+  blockedSeries?: number[];
+  todoSeries?: number[];
 }) {
   return (
     <Card className="flex flex-col">
       <PanelHeader icon={CheckCircle2} title="工作量分布" />
-      <CardContent className="flex flex-1 flex-col justify-around gap-2 pt-3">
-        <WorkloadRow icon={PlayCircle} label="进行中" value={doing} tone="info" />
+      <CardContent className="flex flex-1 flex-col gap-2 pt-3">
+        <WorkloadRow
+          icon={PlayCircle}
+          label="进行中"
+          value={doing}
+          tone="info"
+          series={doingSeries}
+          seriesHint="过去 7 天"
+        />
         <WorkloadRow
           icon={AlertTriangle}
           label="阻塞"
           value={blocked}
           tone={blocked > 0 ? "warn" : undefined}
+          series={blockedSeries}
+          seriesHint="过去 7 天"
         />
-        <WorkloadRow icon={Inbox} label="待办" value={todo} />
+        <WorkloadRow
+          icon={Inbox}
+          label="待办"
+          value={todo}
+          series={todoSeries}
+          seriesHint="过去 7 天"
+        />
+        <WorkloadRow
+          icon={CheckCircle2}
+          label="今日完成"
+          value={doneToday}
+          tone="success"
+          series={completedSeries}
+          seriesHint="过去 7 天"
+        />
+        <WorkloadRow
+          icon={CalendarClock}
+          label="未来 7 天截止"
+          value={dueWeek}
+          tone={dueWeek > 0 ? "warn" : undefined}
+          series={dueSeries}
+          seriesHint="按日"
+        />
       </CardContent>
     </Card>
   );
@@ -224,6 +339,7 @@ function WorkloadSummary({
 const TONE_TEXT = {
   info: "text-info",
   warn: "text-warn",
+  success: "text-success",
   muted: "text-muted-foreground",
 } as const;
 
@@ -232,21 +348,39 @@ function WorkloadRow({
   label,
   value,
   tone,
+  series,
+  seriesHint,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
-  tone?: "info" | "warn";
+  tone?: "info" | "warn" | "success";
+  /** 有 series 时右侧画 sparkline；没有则不画（不挤压数字位置） */
+  series?: number[];
+  /** sparkline 上方 tooltip 文案，便于鼠标悬停说明数据口径 */
+  seriesHint?: string;
 }) {
   const colorClass = tone ? TONE_TEXT[tone] : "text-foreground";
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Icon className={cn("h-4 w-4", colorClass)} />
-        {label}
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+        <Icon className={cn("h-4 w-4 shrink-0", colorClass)} />
+        <span className="truncate">{label}</span>
       </div>
-      <div className={cn("text-2xl font-semibold tabular-nums", colorClass)}>
-        {value}
+      <div className="flex items-center gap-2">
+        {series && series.length > 1 && (
+          <span className={colorClass} title={seriesHint}>
+            <Sparkline data={series} width={68} height={20} />
+          </span>
+        )}
+        <div
+          className={cn(
+            "min-w-[2ch] text-right text-xl font-semibold tabular-nums",
+            colorClass,
+          )}
+        >
+          {value}
+        </div>
       </div>
     </div>
   );
