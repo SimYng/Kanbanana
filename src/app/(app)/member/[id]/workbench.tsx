@@ -16,13 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MemberAvatar } from "@/components/member-avatar";
-import { TaskCard } from "@/components/task-card";
-import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskDialog } from "@/components/task-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
 import { BlockReasonDialog } from "@/components/block-reason-dialog";
+import { MemberSwitcher } from "@/components/member-switcher";
+import { MemberKanban, type ReorderRequest } from "./member-kanban";
 import { apiFetch } from "@/lib/fetcher";
-import { isTaskVisible, isToday } from "@/lib/utils";
+import { cn, isTaskVisible, isToday } from "@/lib/utils";
 import { type MemberDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
 
 interface WorkbenchProps {
@@ -44,17 +44,22 @@ export function MemberWorkbench({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
 
-  const { doing, todo, blocked, done, doneToday } = useMemo(() => {
+  const { doing, todo, blocked, done, doneToday, kanbanTasks } = useMemo(() => {
     // 归档项目里未完成的任务视为「作废」，不在工作台展示；
     // 已完成的任务仍保留，作为历史业绩。
     const visible = tasks.filter(isTaskVisible);
+    const doingArr = visible.filter((t) => t.status === "doing");
+    const todoArr = visible.filter((t) => t.status === "todo");
+    const blockedArr = visible.filter((t) => t.status === "blocked");
     const doneAll = visible.filter((t) => t.status === "done");
     return {
-      doing: visible.filter((t) => t.status === "doing"),
-      todo: visible.filter((t) => t.status === "todo"),
-      blocked: visible.filter((t) => t.status === "blocked"),
+      doing: doingArr,
+      todo: todoArr,
+      blocked: blockedArr,
       done: doneAll,
       doneToday: doneAll.filter((t) => isToday(t.completedAt)),
+      // Kanban 三列任务集合（不含 done，done 折叠在底部）
+      kanbanTasks: [...doingArr, ...todoArr, ...blockedArr],
     };
   }, [tasks]);
 
@@ -112,17 +117,14 @@ export function MemberWorkbench({
     }
   }
 
-  async function handleReorder(
-    draggedId: string,
-    targetId: string,
-    position: "before" | "after",
-  ) {
+  // 统一处理 Kanban 拖拽：兼容"列内排序"与"跨列切换状态"两种模式
+  async function handleReorderRequest(req: ReorderRequest) {
     try {
       const res = await apiFetch<{ task: TaskDTO; rebalanced: boolean }>(
         "/api/tasks/reorder",
         {
           method: "POST",
-          body: JSON.stringify({ draggedId, targetId, position }),
+          body: JSON.stringify(req),
         },
       );
       if (res.rebalanced) {
@@ -132,7 +134,8 @@ export function MemberWorkbench({
       }
       router.refresh();
     } catch (e) {
-      toast.error(`排序失败：${(e as Error).message}`);
+      toast.error(`拖拽失败：${(e as Error).message}`);
+      throw e;
     }
   }
 
@@ -142,136 +145,73 @@ export function MemberWorkbench({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/team">
-            <ArrowLeft className="h-4 w-4" />
-            团队总览
-          </Link>
-        </Button>
-        <Separator orientation="vertical" className="h-6" />
-        <MemberAvatar name={member.name} />
-        <div>
+    <div className="flex flex-1 flex-col gap-4">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/team">
+              <ArrowLeft className="h-4 w-4" />
+              团队总览
+            </Link>
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <MemberAvatar name={member.name} />
           <h1 className="text-xl font-semibold tracking-tight">
             {member.name} 的工作台
           </h1>
-          <p className="text-xs text-muted-foreground">
-            列表顶部 = 优先做 · 上下拖动卡片调整执行顺序
-          </p>
+          <div className="ml-auto">
+            <NewTaskDialog
+              projects={projects.filter((p) => !p.archived)}
+              members={allMembers}
+              defaultAssigneeId={member.id}
+              onCreated={(created) => {
+                patchLocal(created);
+                router.refresh();
+              }}
+              triggerLabel="新建任务"
+            />
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          {allMembers
-            .filter((m) => m.role !== "admin")
-            .map((m) => (
-              <Button
-                key={m.id}
-                asChild
-                size="sm"
-                variant={m.id === member.id ? "secondary" : "ghost"}
-              >
-                <Link href={`/member/${m.id}`}>{m.name}</Link>
-              </Button>
-            ))}
-        </div>
+
+        <MemberSwitcher
+          currentId={member.id}
+          members={allMembers}
+          disabled={dialogOpen || !!blockingTask}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <CompactStat
           label="进行中"
           value={doing.length}
           tone={doing.length > 0 ? "info" : undefined}
           icon={PlayCircle}
         />
-        <Stat label="待办" value={todo.length} icon={Inbox} />
-        <Stat
+        <CompactStat label="待办" value={todo.length} icon={Inbox} />
+        <CompactStat
           label="阻塞中"
           value={blocked.length}
           tone={blocked.length ? "warn" : undefined}
           icon={AlertTriangle}
         />
-        <Stat label="今日已完成" value={doneToday.length} tone="success" icon={CheckCircle2} />
+        <CompactStat
+          label="今日已完成"
+          value={doneToday.length}
+          tone="success"
+          icon={CheckCircle2}
+        />
       </div>
 
-      <Section
-        title="进行中"
-        count={doing.length}
-        hint="手头正在做的事 · 拖动调整顺序"
-        action={
-          <NewTaskDialog
-            projects={projects.filter((p) => !p.archived)}
-            members={allMembers}
-            defaultAssigneeId={member.id}
-            onCreated={(created) => {
-              patchLocal(created);
-              router.refresh();
-            }}
-            triggerLabel="新建任务"
-          />
-        }
-      >
-        {doing.length === 0 ? (
-          <EmptyHint>手头很干净 🍌 从下方"待办"挑一个开始蕉。</EmptyHint>
-        ) : (
-          <SortableTaskList tasks={doing} onReorder={handleReorder}>
-            <div className="space-y-2">
-              {doing.map((t) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  hideAssignee
-                  onAction={handleAction}
-                  onOpen={openTaskDialog}
-                />
-              ))}
-            </div>
-          </SortableTaskList>
-        )}
-      </Section>
-
-      <Section
-        title="待办"
-        count={todo.length}
-        hint="顶部 = 接下来要做 · 拖动卡片调整顺序"
-      >
-        {todo.length === 0 ? (
-          <EmptyHint>没人蕉代你新活，今天可以早点下班 🎉</EmptyHint>
-        ) : (
-          <SortableTaskList tasks={todo} onReorder={handleReorder}>
-            <div className="space-y-2">
-              {todo.map((t) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  hideAssignee
-                  onAction={handleAction}
-                  onOpen={openTaskDialog}
-                />
-              ))}
-            </div>
-          </SortableTaskList>
-        )}
-      </Section>
-
-      {blocked.length > 0 && (
-        <Section title="阻塞中" count={blocked.length}>
-          <div className="space-y-2">
-            {blocked.map((t) => (
-              <TaskCard
-                key={t.id}
-                task={t}
-                hideAssignee
-                onAction={handleAction}
-                onOpen={openTaskDialog}
-              />
-            ))}
-          </div>
-        </Section>
-      )}
+      <MemberKanban
+        tasks={kanbanTasks}
+        onOpen={openTaskDialog}
+        onAction={handleAction}
+        onReorderRequest={handleReorderRequest}
+      />
 
       {done.length > 0 && (
         <details className="group rounded-lg border">
-          <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium">
+          <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium">
             <CheckCircle2 className="h-4 w-4 text-success" />
             已完成
             <Badge variant="muted" className="font-normal">
@@ -284,11 +224,11 @@ export function MemberWorkbench({
               收起
             </span>
           </summary>
-          <div className="space-y-1 border-t p-4 text-sm">
+          <div className="space-y-1 border-t p-3 text-xs">
             {done.map((t) => (
               <div key={t.id} className="flex items-center gap-2 text-muted-foreground">
                 <span className="line-through">{t.title}</span>
-                <span className="text-xs">· {t.project.name}</span>
+                <span>· {t.project.name}</span>
               </div>
             ))}
           </div>
@@ -326,39 +266,7 @@ export function MemberWorkbench({
   );
 }
 
-function Section({
-  title,
-  count,
-  hint,
-  action,
-  children,
-}: {
-  title: React.ReactNode;
-  count?: number;
-  hint?: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold">{title}</h2>
-          {typeof count === "number" && (
-            <Badge variant="muted" className="font-normal">
-              {count}
-            </Badge>
-          )}
-        </div>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-        <div className="ml-auto">{action}</div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Stat({
+function CompactStat({
   label,
   value,
   tone,
@@ -379,21 +287,19 @@ function Stat({
           : "text-foreground";
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className={`flex items-center gap-2 text-2xl font-semibold tabular-nums ${toneClass}`}>
-          {Icon && <Icon className="h-4 w-4" />}
+      <CardContent className="flex items-center gap-2 p-3">
+        {Icon && <Icon className={cn("h-4 w-4", toneClass)} />}
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <span
+          className={cn(
+            "ml-auto text-xl font-semibold leading-none tabular-nums",
+            toneClass,
+          )}
+        >
           {value}
-        </div>
-        <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+        </span>
       </CardContent>
     </Card>
   );
 }
 
-function EmptyHint({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
-      {children}
-    </div>
-  );
-}
