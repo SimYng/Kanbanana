@@ -17,7 +17,9 @@ export default async function MemberPage({
       where: { role: "member" },
       orderBy: { createdAt: "asc" },
     }),
-    prisma.project.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.project.findMany({
+      orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
+    }),
     prisma.task.findMany({
       where: { assigneeId: params.id },
       include: TASK_INCLUDE,

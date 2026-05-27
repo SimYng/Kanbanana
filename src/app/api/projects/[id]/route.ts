@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { errorJson, handleError, okJson } from "@/lib/api";
+import { appendSortIndex } from "@/lib/sort-index";
 import { PROJECT_COLORS, type ProjectColor, type ProjectDTO } from "@/lib/types";
 
 const UpdateInput = z
@@ -22,9 +23,27 @@ export async function PATCH(
   try {
     await requireAdmin();
     const data = UpdateInput.parse(await req.json());
+
+    // 取消归档时把项目挂回「活跃项目」队尾，避免旧 sortIndex 卡在奇怪位置。
+    let extra: { sortIndex?: number } = {};
+    if (data.archived === false) {
+      const current = await prisma.project.findUnique({
+        where: { id: params.id },
+        select: { archived: true },
+      });
+      if (current?.archived) {
+        const activeSiblings = await prisma.project.findMany({
+          where: { archived: false },
+          select: { id: true, sortIndex: true },
+          orderBy: { sortIndex: "asc" },
+        });
+        extra = { sortIndex: appendSortIndex(activeSiblings) };
+      }
+    }
+
     const project = await prisma.project.update({
       where: { id: params.id },
-      data,
+      data: { ...data, ...extra },
     });
     return okJson<ProjectDTO>({
       id: project.id,

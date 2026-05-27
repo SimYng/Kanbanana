@@ -83,7 +83,11 @@ src/lib/
 工作台按 `status` 分四区：进行中 / 待办 / 阻塞中 / 已完成。「今日聚焦」概念已废弃，但 `Task.focusedToday` 字段仍保留以兼容旧迁移和未来可能的需求——**不要再在 UI 引用它**。
 
 ### sortIndex 浮点中点插入
-拖拽只更新被移动卡片的 `sortIndex = (prev + next) / 2`，作用域 = `assigneeId`。约 50 次连续插入后精度告警，触发 `rebalance` 事务重排该作用域全部任务。算法见 `src/lib/sort-index.ts`。
+拖拽只更新被移动卡片的 `sortIndex = (prev + next) / 2`。约 50 次连续插入后精度告警，触发 `rebalance` 事务重排该作用域全部记录。算法见 `src/lib/sort-index.ts`，被 **任务** 和 **项目** 两套排序共用，未来再加其它实体排序也直接复用同一套工具。
+
+各作用域定义：
+- **任务排序**（`/api/tasks/reorder`）：作用域 = `assigneeId`（即每个成员一份独立顺序）
+- **项目排序**（`/api/projects/reorder`，admin 专属）：作用域 = `archived === false`（归档项目不参与排序）
 
 ### 优先级与执行顺序双轨制
 - `priority` (P0–P3)：客观重要性
@@ -92,14 +96,22 @@ src/lib/
 
 ### 项目归档 ≠ 删除
 - **归档**：项目结束。一键可逆。具体语义：
-  - 项目列表里折叠到底部分区，新建任务时下拉过滤掉
+  - 项目列表里折叠到底部分区，新建任务时下拉过滤掉，**不参与项目排序**
   - 项目看板（`/project/[id]`）仍可访问，用于查阅历史
   - 「归档项目里 + 未完成」的任务视为**作废**：团队总览、成员工作台、阻塞看板、所有顶部统计都隐藏它们
   - 「归档项目里 + 已完成」的任务**保留**：算到历史业绩里（如「今日已完成」）
   - 统一通过 `isTaskVisible` / `isTaskDiscarded` 判断（`src/lib/utils.ts`），不要在使用点散写 `task.project.archived && ...`
+- **取消归档**：API 自动把项目的 `sortIndex` 重设为「活跃项目队尾」，避免旧 sortIndex 卡在奇怪位置。
 - **删除**：物理删除，schema 的 `Task.project onDelete: Cascade` 会级联删除任务，需二次确认并明示"将删除 N 个任务"。
 - 删除当前正在浏览的项目要 `router.push("/projects")` 避免 404。
 - `TaskDTO.project.archived` 字段已暴露给前端，新写过滤逻辑直接用 helper 即可。
+
+### 项目排序（admin 专属）
+- `/projects` 页面的活跃区是 admin 拖拽排序，普通成员看到的就是 admin 排好的固定顺序
+- 拖拽手柄只挂在左上角 `GripVertical` 图标上，整张卡片仍可点击跳转
+- grid 布局用 `rectSortingStrategy`，与列表排序的 `verticalListSortingStrategy` 区分
+- 全局所有列项目下拉 / 项目列表都按 `[archived asc, sortIndex asc, createdAt asc]` 排序，保持视觉一致
+- 归档区不可拖（API 校验 `ARCHIVED_NOT_SORTABLE`，前端 grid 也不挂 dnd）
 
 ### 阻塞必须带原因
 点击「阻塞」按钮**不直接**改 status，先弹 `BlockReasonDialog` 收集 `blockedReason`，提交时一并 PATCH。切到非 blocked 状态时**主动清空 blockedReason**，避免残留旧文案。参见 `workbench.tsx` 的 `handleAction`。

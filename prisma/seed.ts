@@ -51,13 +51,15 @@ async function main() {
     { name: "内部 CRM", color: "orange" },
   ];
 
+  const PROJECT_STEP = 1024;
   const projects: Record<string, string> = {};
-  for (const p of projectDefs) {
+  for (let i = 0; i < projectDefs.length; i++) {
+    const p = projectDefs[i];
     const existing = await prisma.project.findFirst({ where: { name: p.name } });
     const project =
       existing ??
       (await prisma.project.create({
-        data: { name: p.name, color: p.color },
+        data: { name: p.name, color: p.color, sortIndex: (i + 1) * PROJECT_STEP },
       }));
     projects[p.name] = project.id;
   }

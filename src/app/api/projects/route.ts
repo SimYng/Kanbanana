@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser, requireAdmin } from "@/lib/session";
 import { handleError, okJson } from "@/lib/api";
+import { appendSortIndex } from "@/lib/sort-index";
 import { PROJECT_COLORS, type ProjectColor, type ProjectDTO } from "@/lib/types";
 
 const CreateInput = z.object({
@@ -13,7 +14,7 @@ export async function GET() {
   try {
     await requireUser();
     const projects = await prisma.project.findMany({
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
     });
     const out: ProjectDTO[] = projects.map((p) => ({
       id: p.id,
@@ -31,7 +32,17 @@ export async function POST(req: Request) {
   try {
     await requireAdmin();
     const data = CreateInput.parse(await req.json());
-    const project = await prisma.project.create({ data });
+
+    // 新项目挂到「活跃项目」队尾。归档项目不参与拖拽，不会被影响。
+    const activeSiblings = await prisma.project.findMany({
+      where: { archived: false },
+      select: { id: true, sortIndex: true },
+      orderBy: { sortIndex: "asc" },
+    });
+
+    const project = await prisma.project.create({
+      data: { ...data, sortIndex: appendSortIndex(activeSiblings) },
+    });
     return okJson(
       {
         id: project.id,

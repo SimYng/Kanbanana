@@ -15,7 +15,9 @@ export default async function ProjectPage({
   const [user, project, projects, members, tasks] = await Promise.all([
     getCurrentUser(),
     prisma.project.findUnique({ where: { id: params.id } }),
-    prisma.project.findMany({ orderBy: [{ archived: "asc" }, { createdAt: "asc" }] }),
+    prisma.project.findMany({
+      orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
+    }),
     prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.task.findMany({
       where: { projectId: params.id },

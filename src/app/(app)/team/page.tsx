@@ -26,7 +26,7 @@ export default async function TeamPage() {
     }),
     prisma.project.findMany({
       where: { archived: false },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
     }),
   ]);
 
