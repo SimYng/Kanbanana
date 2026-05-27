@@ -22,7 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/fetcher";
-import { isoToLocalDate, localDateToIso } from "@/lib/utils";
+import { cn, isoToLocalDate, localDateToIso } from "@/lib/utils";
+import { STATUS_THEME } from "@/lib/status-theme";
 import {
   STATUS_LABEL,
   TASK_STATUSES,
@@ -180,18 +181,43 @@ export function TaskDialog({
 
           <div className="grid gap-2">
             <Label>状态</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
+            {/* segmented buttons：4 个状态一键切换，比下拉少一次点击 */}
+            <div
+              role="radiogroup"
+              aria-label="任务状态"
+              className="grid grid-cols-4 gap-1 rounded-md border bg-muted/30 p-1"
+            >
+              {TASK_STATUSES.map((s) => {
+                const active = s === status;
+                const theme = STATUS_THEME[s];
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setStatus(s)}
+                    className={cn(
+                      "relative h-9 rounded text-sm font-medium transition-colors",
+                      active
+                        ? cn(
+                            "bg-background shadow-sm ring-1 ring-border",
+                            theme.title,
+                          )
+                        : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle",
+                        theme.dot,
+                      )}
+                    />
                     {STATUS_LABEL[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
