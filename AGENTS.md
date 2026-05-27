@@ -147,6 +147,7 @@ src/lib/
 | **Link 包卡片 + 内嵌菜单按钮冒泡** | 点菜单同时触发卡片导航 | 菜单组件**放在 Link 外面**用 `absolute` 定位到卡片角落，并加 `stopPropagation` 双保险 |
 | **Dialog 里 description 渲染块级元素** | DialogDescription 默认是 `<p>`，里面塞 `<div>` 会触发 hydration 警告 | 用 phrasing content（span/br），或 `asChild` 把 wrapper 换成 div |
 | **dnd-kit 拖拽手柄常驻** | 视觉噪音大 | 用 `group-hover:opacity-100` + `opacity-0` 让手柄 hover 才出现 |
+| **Client mutation 后忘记 `router.refresh()`** | 本页本地 state 已乐观更新，但切到其他页面（团队总览 / 项目列表）会看到旧数据，Next.js 14 默认 client router cache 缓存 RSC payload 约 30 秒 | **凡是 client 端做的 mutation（API 调用成功后）一律加 `router.refresh()`**，让其它 server component 页面的 RSC 缓存失效。本页面 useState 不会被覆盖，跨页面切换会拿到最新值。`force-dynamic` 不解决这个问题，它只影响 server fetch cache，不影响 router cache |
 
 ## 6. 添加新功能的步骤模板
 
@@ -157,6 +158,7 @@ src/lib/
 4. 错误用 `handleError(e)` 包装 → 统一返回 `{ error: "CODE" }`
 5. 客户端用 `apiFetch<T>(path, init)`，错误信息会以 `Error(code)` 抛出
 6. 在 `src/lib/types.ts` 加 DTO 类型，在 `src/lib/serializers.ts` 加序列化
+7. **写操作（POST/PATCH/DELETE）成功后**，调用方一律 `router.refresh()`（见反模式表）
 
 ### 加一个新 Dialog
 1. 复制 `confirm-dialog.tsx` / `block-reason-dialog.tsx` 结构（受控 `open` + `onOpenChange`）

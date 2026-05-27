@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ export function ProjectBoard({
   initialTasks,
   isAdmin,
 }: ProjectBoardProps) {
+  const router = useRouter();
   const [project, setProject] = useState<ProjectDTO>(initialProject);
   const [tasks, setTasks] = useState<TaskDTO[]>(initialTasks);
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
@@ -90,6 +92,7 @@ export function ProjectBoard({
       } else {
         patchLocal(res.task);
       }
+      router.refresh();
     } catch (e) {
       toast.error(`排序失败：${(e as Error).message}`);
     }
@@ -142,7 +145,10 @@ export function ProjectBoard({
             projects={assignableProjects}
             members={members}
             defaultProjectId={project.id}
-            onCreated={patchLocal}
+            onCreated={(created) => {
+              patchLocal(created);
+              router.refresh();
+            }}
           />
         </div>
       </div>
@@ -209,8 +215,12 @@ export function ProjectBoard({
           } else {
             patchLocal(updated);
           }
+          router.refresh();
         }}
-        onDeleted={(id) => setTasks((prev) => prev.filter((t) => t.id !== id))}
+        onDeleted={(id) => {
+          setTasks((prev) => prev.filter((t) => t.id !== id));
+          router.refresh();
+        }}
       />
     </div>
   );

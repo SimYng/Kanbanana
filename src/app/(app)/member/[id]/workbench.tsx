@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -37,6 +38,7 @@ export function MemberWorkbench({
   projects,
   initialTasks,
 }: WorkbenchProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState<TaskDTO[]>(initialTasks);
   const [openTask, setOpenTask] = useState<TaskDTO | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -91,6 +93,7 @@ export function MemberWorkbench({
         body: JSON.stringify(payload),
       });
       patchLocal(updated);
+      router.refresh();
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -104,6 +107,7 @@ export function MemberWorkbench({
       });
       patchLocal(updated);
       toast.success("已标记为阻塞");
+      router.refresh();
     } catch (e) {
       toast.error((e as Error).message);
       throw e;
@@ -128,6 +132,7 @@ export function MemberWorkbench({
       } else {
         patchLocal(res.task);
       }
+      router.refresh();
     } catch (e) {
       toast.error(`排序失败：${(e as Error).message}`);
     }
@@ -214,7 +219,10 @@ export function MemberWorkbench({
             projects={projects.filter((p) => !p.archived)}
             members={allMembers}
             defaultAssigneeId={member.id}
-            onCreated={patchLocal}
+            onCreated={(created) => {
+              patchLocal(created);
+              router.refresh();
+            }}
             triggerLabel="新建任务"
           />
         }
@@ -316,8 +324,12 @@ export function MemberWorkbench({
           } else {
             patchLocal(updated);
           }
+          router.refresh();
         }}
-        onDeleted={(id) => setTasks((prev) => prev.filter((t) => t.id !== id))}
+        onDeleted={(id) => {
+          setTasks((prev) => prev.filter((t) => t.id !== id));
+          router.refresh();
+        }}
       />
 
       <BlockReasonDialog
