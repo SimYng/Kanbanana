@@ -27,13 +27,17 @@ import {
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import { NewMemberDialog } from "@/components/new-member-dialog";
 import { apiFetch } from "@/lib/fetcher";
-import { localDateToIso } from "@/lib/utils";
-import type {
-  MemberDTO,
-  ProjectCategoryDTO,
-  ProjectDTO,
-  TaskDTO,
+import { cn, localDateToIso } from "@/lib/utils";
+import {
+  STATUS_LABEL,
+  TASK_STATUSES,
+  type MemberDTO,
+  type ProjectCategoryDTO,
+  type ProjectDTO,
+  type TaskDTO,
+  type TaskStatus,
 } from "@/lib/types";
+import { STATUS_THEME } from "@/lib/status-theme";
 
 interface NewTaskDialogProps {
   projects: ProjectDTO[];
@@ -68,6 +72,8 @@ export function NewTaskDialog({
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [projectId, setProjectId] = useState<string>("");
+  const [status, setStatus] = useState<TaskStatus>("todo");
+  const [blockedReason, setBlockedReason] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [yuqueLink, setYuqueLink] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,6 +100,8 @@ export function NewTaskDialog({
       setAssigneeId(defaultAssigneeId ?? "");
       setTitle("");
       setDescription("");
+      setStatus("todo");
+      setBlockedReason("");
       setDueDate("");
       setYuqueLink("");
     }
@@ -148,6 +156,12 @@ export function NewTaskDialog({
           description: description || undefined,
           projectId,
           assigneeId: assigneeId || null,
+          status,
+          // 只有 blocked 状态才带原因，其它状态显式不传（与编辑弹窗保持一致）
+          blockedReason:
+            status === "blocked" && blockedReason.trim()
+              ? blockedReason.trim()
+              : undefined,
           dueDate: localDateToIso(dueDate),
           yuqueLinks,
         }),
@@ -304,6 +318,58 @@ export function NewTaskDialog({
               </div>
             </div>
           </div>
+
+          <div className="grid gap-2">
+            <Label>状态</Label>
+            {/* segmented buttons：和编辑弹窗共用同一套样式 / 主题色 */}
+            <div
+              role="radiogroup"
+              aria-label="任务状态"
+              className="grid grid-cols-4 gap-1 rounded-md border bg-muted/30 p-1"
+            >
+              {TASK_STATUSES.map((s) => {
+                const active = s === status;
+                const theme = STATUS_THEME[s];
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setStatus(s)}
+                    className={cn(
+                      "relative h-9 rounded text-sm font-medium transition-colors",
+                      active
+                        ? cn(
+                            "bg-background shadow-sm ring-1 ring-border",
+                            theme.title,
+                          )
+                        : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle",
+                        theme.dot,
+                      )}
+                    />
+                    {STATUS_LABEL[s]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {status === "blocked" && (
+            <div className="grid gap-2">
+              <Label>阻塞原因（可选）</Label>
+              <Input
+                value={blockedReason}
+                onChange={(e) => setBlockedReason(e.target.value)}
+                placeholder="例如：等待 XX 出图 / 待运维开通权限"
+              />
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="new-task-due">截止日期（可选）</Label>
