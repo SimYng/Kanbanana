@@ -12,7 +12,7 @@ export default async function ProjectPage({
 }: {
   params: { id: string };
 }) {
-  const [user, project, projects, members, tasks] = await Promise.all([
+  const [user, project, projects, members, tasks, taskCounts] = await Promise.all([
     getCurrentUser(),
     prisma.project.findUnique({ where: { id: params.id } }),
     prisma.project.findMany({
@@ -23,6 +23,11 @@ export default async function ProjectPage({
       where: { projectId: params.id },
       include: TASK_INCLUDE,
       orderBy: { sortIndex: "asc" },
+    }),
+    // 顶部项目切换栏每个 chip 需要 todo/doing/blocked 计数，一次性聚合
+    prisma.task.groupBy({
+      by: ["projectId", "status"],
+      _count: { _all: true },
     }),
   ]);
 
@@ -42,6 +47,14 @@ export default async function ProjectPage({
     role: m.role as MemberDTO["role"],
   }));
 
+  const projectStats: Record<string, { todo: number; doing: number; blocked: number }> = {};
+  for (const row of taskCounts) {
+    const slot = (projectStats[row.projectId] ??= { todo: 0, doing: 0, blocked: 0 });
+    if (row.status === "todo") slot.todo = row._count._all;
+    else if (row.status === "doing") slot.doing = row._count._all;
+    else if (row.status === "blocked") slot.blocked = row._count._all;
+  }
+
   return (
     <ProjectBoard
       project={{
@@ -51,6 +64,7 @@ export default async function ProjectPage({
         archived: project.archived,
       }}
       projects={projectDtos}
+      projectStats={projectStats}
       members={memberDtos}
       initialTasks={tasks.map(serializeTask)}
       isAdmin={user?.role === "admin"}

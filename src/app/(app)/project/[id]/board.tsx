@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Archive } from "lucide-react";
@@ -59,17 +59,24 @@ const STATUS_THEME: Record<
   },
 };
 
+type ProjectStat = { todo: number; doing: number; blocked: number };
+
 interface ProjectBoardProps {
   project: ProjectDTO;
   projects: ProjectDTO[];
+  /** 全部项目按状态聚合的任务数，用于顶部切换栏 chip 角标 */
+  projectStats: Record<string, ProjectStat>;
   members: MemberDTO[];
   initialTasks: TaskDTO[];
   isAdmin?: boolean;
 }
 
+const EMPTY_STAT: ProjectStat = { todo: 0, doing: 0, blocked: 0 };
+
 export function ProjectBoard({
   project: initialProject,
   projects,
+  projectStats,
   members,
   initialTasks,
   isAdmin,
@@ -171,58 +178,107 @@ export function ProjectBoard({
     }
   }
 
+  const visibleSwitcherProjects = useMemo(
+    () => projects.filter((p) => !p.archived || p.id === project.id),
+    [projects, project.id],
+  );
+
+  // 键盘 ←/→ 在项目之间循环切换。
+  // 跳过：输入框/可编辑元素中、任何弹窗打开、带修饰键、不在切换栏可达列表中。
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (dialogOpen || blockingTask) return;
+
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      const idx = visibleSwitcherProjects.findIndex((p) => p.id === project.id);
+      if (idx === -1 || visibleSwitcherProjects.length < 2) return;
+
+      const delta = e.key === "ArrowLeft" ? -1 : 1;
+      const nextIdx =
+        (idx + delta + visibleSwitcherProjects.length) %
+        visibleSwitcherProjects.length;
+      const next = visibleSwitcherProjects[nextIdx];
+      if (next && next.id !== project.id) {
+        e.preventDefault();
+        router.push(`/project/${next.id}`);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [visibleSwitcherProjects, project.id, dialogOpen, blockingTask, router]);
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/projects">
-            <ArrowLeft className="h-4 w-4" />
-            项目列表
-          </Link>
-        </Button>
-        <span
-          className="inline-block h-3 w-3 rounded-full"
-          style={{ background: PROJECT_COLOR_HEX[project.color] }}
-        />
-        <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
-        {project.archived && (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/projects">
+              <ArrowLeft className="h-4 w-4" />
+              项目列表
+            </Link>
+          </Button>
+          <span
+            className="inline-block h-3 w-3 rounded-full"
+            style={{ background: PROJECT_COLOR_HEX[project.color] }}
+          />
+          <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
+          {project.archived && (
+            <Badge variant="muted" className="font-normal">
+              已归档
+            </Badge>
+          )}
           <Badge variant="muted" className="font-normal">
-            已归档
+            {tasks.length} 个任务
           </Badge>
-        )}
-        <Badge variant="muted" className="font-normal">
-          {tasks.length} 个任务
-        </Badge>
-        {isAdmin && (
-          <ProjectActionsMenu
-            project={project}
-            taskCount={tasks.length}
-            onUpdated={setProject}
-            redirectAfterDelete="/projects"
-          />
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          {projects
-            .filter((p) => !p.archived || p.id === project.id)
-            .map((p) => (
-              <Button
-                key={p.id}
-                asChild
-                size="sm"
-                variant={p.id === project.id ? "secondary" : "ghost"}
-              >
-                <Link href={`/project/${p.id}`}>{p.name}</Link>
-              </Button>
-            ))}
-          <NewTaskDialog
-            projects={assignableProjects}
-            members={members}
-            defaultProjectId={project.id}
-            onCreated={(created) => {
-              patchLocal(created);
-              router.refresh();
-            }}
-          />
+          {isAdmin && (
+            <ProjectActionsMenu
+              project={project}
+              taskCount={tasks.length}
+              onUpdated={setProject}
+              redirectAfterDelete="/projects"
+            />
+          )}
+          <div className="ml-auto">
+            <NewTaskDialog
+              projects={assignableProjects}
+              members={members}
+              defaultProjectId={project.id}
+              onCreated={(created) => {
+                patchLocal(created);
+                router.refresh();
+              }}
+            />
+          </div>
+        </div>
+
+        {/* 项目切换栏：超过一行直接换行，每个 chip 展示该项目的 todo / doing / blocked 数 */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {visibleSwitcherProjects.map((p) => (
+            <ProjectSwitcherChip
+              key={p.id}
+              project={p}
+              stats={projectStats[p.id] ?? EMPTY_STAT}
+              active={p.id === project.id}
+            />
+          ))}
+          {visibleSwitcherProjects.length > 1 && (
+            <span className="ml-1 text-[10px] text-muted-foreground/60">
+              ← / → 切换
+            </span>
+          )}
         </div>
       </div>
 
@@ -311,5 +367,60 @@ export function ProjectBoard({
         onSubmit={submitBlock}
       />
     </div>
+  );
+}
+
+/**
+ * 顶部项目切换 chip：色点 + 项目名 + 三色未完成数(todo·doing·blocked)
+ * 仅显示 >0 的数字，避免一排 0 制造视觉噪音
+ */
+function ProjectSwitcherChip({
+  project,
+  stats,
+  active,
+}: {
+  project: ProjectDTO;
+  stats: ProjectStat;
+  active: boolean;
+}) {
+  const hasAny = stats.todo + stats.doing + stats.blocked > 0;
+  return (
+    <Link
+      href={`/project/${project.id}`}
+      className={cn(
+        "group flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+        active
+          ? "border-foreground/40 bg-accent font-medium text-foreground"
+          : "border-border/60 text-muted-foreground hover:border-foreground/25 hover:bg-accent/40 hover:text-foreground",
+      )}
+      title={`${project.name} · 待办 ${stats.todo} · 进行 ${stats.doing} · 阻塞 ${stats.blocked}`}
+    >
+      <span
+        className="inline-block h-2 w-2 shrink-0 rounded-full"
+        style={{ background: PROJECT_COLOR_HEX[project.color] }}
+      />
+      <span className="max-w-[10rem] truncate">{project.name}</span>
+      {hasAny && (
+        <span className="ml-0.5 inline-flex items-center gap-1 text-[10px] tabular-nums">
+          {stats.todo > 0 && (
+            <span className="text-muted-foreground">{stats.todo}</span>
+          )}
+          {stats.doing > 0 && (
+            <>
+              {stats.todo > 0 && <span className="text-muted-foreground/30">·</span>}
+              <span className="text-info">{stats.doing}</span>
+            </>
+          )}
+          {stats.blocked > 0 && (
+            <>
+              {(stats.todo > 0 || stats.doing > 0) && (
+                <span className="text-muted-foreground/30">·</span>
+              )}
+              <span className="text-warn">{stats.blocked}</span>
+            </>
+          )}
+        </span>
+      )}
+    </Link>
   );
 }
