@@ -450,7 +450,7 @@ function OverviewColumn({
         </div>
       </CardHeader>
 
-      <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto pt-3">
+      <CardContent className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pt-2">
         {tasks.length === 0 ? (
           <div className="rounded border border-dashed py-6 text-center text-xs text-muted-foreground">
             {emptyText}
@@ -465,7 +465,7 @@ function OverviewColumn({
                 tasks={items}
                 onReorder={onReorder}
               >
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {items.map((t) => (
                     <BoardTaskCard
                       key={t.id}

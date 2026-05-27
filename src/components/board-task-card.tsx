@@ -108,7 +108,7 @@ export function BoardTaskCard({
       )}
       onClick={() => onOpen?.(task)}
     >
-      <CardContent className="space-y-1 p-2.5">
+      <CardContent className="space-y-0.5 px-2 py-1.5">
         <div className="flex items-center gap-1.5">
           {!nonSortable && (
             <button
@@ -144,6 +144,8 @@ export function BoardTaskCard({
         </div>
 
         {hasMetaRow && (
+          // pl-6 = grip button(14+2*2=18) + gap-1.5(6) = 24px，
+          // 让 meta 行起点与标题对齐（grip 平时 opacity-0 但仍占位）
           <div className="flex items-center gap-2 pl-6 text-[11px] text-muted-foreground">
             {showProject && (
               <span className="min-w-0 truncate">
