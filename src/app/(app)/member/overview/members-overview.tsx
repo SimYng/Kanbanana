@@ -191,7 +191,25 @@ export function MembersOverview({
           </div>
         ) : (
           <>
-            {/* 未分配池：永远占第一列，方便管理员排活 */}
+            {members.map((m) => (
+              <OverviewColumn
+                key={m.id}
+                title={m.name}
+                href={`/member/${m.id}`}
+                leading={<MemberAvatar name={m.name} />}
+                hoverHint="进入该成员的工作台"
+                emptyText="手头是空的"
+                tasks={grouped.byMember.get(m.id) ?? []}
+                projects={projects}
+                members={members}
+                defaultAssigneeId={m.id}
+                addTaskTooltip={`给 ${m.name} 派活`}
+                onTaskCreated={handleTaskCreated}
+                onOpen={openTaskDialog}
+                onReorder={handleReorder}
+              />
+            ))}
+            {/* 未分配池：放在最右侧，作为「待派活」收纳池 */}
             <OverviewColumn
               key="__unassigned__"
               title="未分配"
@@ -212,24 +230,6 @@ export function MembersOverview({
               onOpen={openTaskDialog}
               onReorder={handleReorder}
             />
-            {members.map((m) => (
-              <OverviewColumn
-                key={m.id}
-                title={m.name}
-                href={`/member/${m.id}`}
-                leading={<MemberAvatar name={m.name} />}
-                hoverHint="进入该成员的工作台"
-                emptyText="手头是空的"
-                tasks={grouped.byMember.get(m.id) ?? []}
-                projects={projects}
-                members={members}
-                defaultAssigneeId={m.id}
-                addTaskTooltip={`给 ${m.name} 派活`}
-                onTaskCreated={handleTaskCreated}
-                onOpen={openTaskDialog}
-                onReorder={handleReorder}
-              />
-            ))}
           </>
         )}
       </div>
