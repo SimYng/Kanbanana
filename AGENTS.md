@@ -91,9 +91,15 @@ src/lib/
 两者互补不冗余。P0 排到队尾恰好暴露「在等什么」。**不要合并这两个概念**。
 
 ### 项目归档 ≠ 删除
-- **归档**：UI 折叠到底部，新建任务时项目下拉过滤掉，但**现有任务仍正常显示**，可继续推进。一键可逆。
+- **归档**：项目结束。一键可逆。具体语义：
+  - 项目列表里折叠到底部分区，新建任务时下拉过滤掉
+  - 项目看板（`/project/[id]`）仍可访问，用于查阅历史
+  - 「归档项目里 + 未完成」的任务视为**作废**：团队总览、成员工作台、阻塞看板、所有顶部统计都隐藏它们
+  - 「归档项目里 + 已完成」的任务**保留**：算到历史业绩里（如「今日已完成」）
+  - 统一通过 `isTaskVisible` / `isTaskDiscarded` 判断（`src/lib/utils.ts`），不要在使用点散写 `task.project.archived && ...`
 - **删除**：物理删除，schema 的 `Task.project onDelete: Cascade` 会级联删除任务，需二次确认并明示"将删除 N 个任务"。
 - 删除当前正在浏览的项目要 `router.push("/projects")` 避免 404。
+- `TaskDTO.project.archived` 字段已暴露给前端，新写过滤逻辑直接用 helper 即可。
 
 ### 阻塞必须带原因
 点击「阻塞」按钮**不直接**改 status，先弹 `BlockReasonDialog` 收集 `blockedReason`，提交时一并 PATCH。切到非 blocked 状态时**主动清空 blockedReason**，避免残留旧文案。参见 `workbench.tsx` 的 `handleAction`。

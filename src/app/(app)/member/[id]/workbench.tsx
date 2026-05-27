@@ -21,7 +21,7 @@ import { TaskDialog } from "@/components/task-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
 import { BlockReasonDialog } from "@/components/block-reason-dialog";
 import { apiFetch } from "@/lib/fetcher";
-import { isToday } from "@/lib/utils";
+import { isTaskVisible, isToday } from "@/lib/utils";
 import { WIP_LIMIT, type MemberDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
 
 interface WorkbenchProps {
@@ -43,11 +43,14 @@ export function MemberWorkbench({
   const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
 
   const { doing, todo, blocked, done, doneToday } = useMemo(() => {
-    const doneAll = tasks.filter((t) => t.status === "done");
+    // 归档项目里未完成的任务视为「作废」，不在工作台展示；
+    // 已完成的任务仍保留，作为历史业绩。
+    const visible = tasks.filter(isTaskVisible);
+    const doneAll = visible.filter((t) => t.status === "done");
     return {
-      doing: tasks.filter((t) => t.status === "doing"),
-      todo: tasks.filter((t) => t.status === "todo"),
-      blocked: tasks.filter((t) => t.status === "blocked"),
+      doing: visible.filter((t) => t.status === "doing"),
+      todo: visible.filter((t) => t.status === "todo"),
+      blocked: visible.filter((t) => t.status === "blocked"),
       done: doneAll,
       doneToday: doneAll.filter((t) => isToday(t.updatedAt)),
     };

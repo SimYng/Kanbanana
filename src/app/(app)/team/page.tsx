@@ -8,7 +8,7 @@ import { MemberAvatar } from "@/components/member-avatar";
 import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
-import { isToday } from "@/lib/utils";
+import { isTaskVisible, isToday } from "@/lib/utils";
 import { WORKLOAD_CAPACITY, type ProjectColor } from "@/lib/types";
 import { PROJECT_COLOR_HEX } from "@/lib/types";
 
@@ -24,10 +24,16 @@ export default async function TeamPage() {
       include: TASK_INCLUDE,
       orderBy: { sortIndex: "asc" },
     }),
-    prisma.project.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.project.findMany({
+      where: { archived: false },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
-  const tasks = allTasks.map(serializeTask);
+  // 已归档项目里的未完成任务视为「作废」，不计入工作量与阻塞统计；
+  // 已完成任务（含归档项目里的）继续保留，作为历史业绩。
+  const allTaskDtos = allTasks.map(serializeTask);
+  const tasks = allTaskDtos.filter(isTaskVisible);
 
   const memberRows = members.map((m) => {
     const mine = tasks.filter((t) => t.assigneeId === m.id);

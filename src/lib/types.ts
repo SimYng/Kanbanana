@@ -64,7 +64,7 @@ export interface TaskDTO {
   blockedReason: string | null;
   dueDate: string | null;
   yuqueLinks: { id: string; url: string; title: string | null }[];
-  project: { id: string; name: string; color: ProjectColor };
+  project: { id: string; name: string; color: ProjectColor; archived: boolean };
   assignee: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;

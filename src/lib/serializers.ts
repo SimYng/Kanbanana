@@ -41,6 +41,7 @@ export function serializeTask(task: TaskWithRelations): TaskDTO {
       id: task.project.id,
       name: task.project.name,
       color: task.project.color as ProjectColor,
+      archived: task.project.archived,
     },
     assignee: task.assignee
       ? { id: task.assignee.id, name: task.assignee.name }
