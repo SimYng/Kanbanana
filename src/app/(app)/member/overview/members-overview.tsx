@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,18 +76,22 @@ export function MembersOverview({
   const grouped = useMemo(() => {
     const byMember = new Map<string, TaskDTO[]>();
     for (const m of members) byMember.set(m.id, []);
+    const unassigned: TaskDTO[] = [];
     for (const t of visibleTasks) {
-      if (!t.assigneeId) continue;
+      if (!t.assigneeId) {
+        unassigned.push(t);
+        continue;
+      }
       byMember.get(t.assigneeId)?.push(t);
     }
-    for (const arr of byMember.values()) {
-      arr.sort((a, b) => {
-        const so = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-        if (so !== 0) return so;
-        return a.sortIndex - b.sortIndex;
-      });
-    }
-    return byMember;
+    const sortFn = (a: TaskDTO, b: TaskDTO) => {
+      const so = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+      if (so !== 0) return so;
+      return a.sortIndex - b.sortIndex;
+    };
+    for (const arr of byMember.values()) arr.sort(sortFn);
+    unassigned.sort(sortFn);
+    return { byMember, unassigned };
   }, [visibleTasks, members]);
 
   function openTaskDialog(task: TaskDTO) {
@@ -106,7 +110,7 @@ export function MembersOverview({
 
   async function refreshAll() {
     const next = await apiFetch<TaskDTO[]>("/api/tasks");
-    setTasks(next.filter((t) => t.assigneeId != null));
+    setTasks(next);
   }
 
   /**
@@ -152,7 +156,7 @@ export function MembersOverview({
             {members.length} 人 · {visibleTasks.length} 个任务
           </Badge>
           <p className="text-xs text-muted-foreground">
-            每人一列 · 顺序：进行中 → 阻塞 → 待办 → 已完成 · 已完成仅显示近 7 天
+            未分配 + 每人一列 · 顺序：进行中 → 阻塞 → 待办 → 已完成 · 已完成仅显示近 7 天
           </p>
         </div>
 
@@ -164,20 +168,42 @@ export function MembersOverview({
       </div>
 
       <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
-        {members.length === 0 ? (
+        {members.length === 0 && grouped.unassigned.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
             还没有成员
           </div>
         ) : (
-          members.map((m) => (
-            <MemberColumn
-              key={m.id}
-              member={m}
-              tasks={grouped.get(m.id) ?? []}
+          <>
+            {/* 未分配池：永远占第一列，方便管理员排活 */}
+            <OverviewColumn
+              key="__unassigned__"
+              title="未分配"
+              href="/member/unassigned"
+              leading={
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <Inbox className="h-3.5 w-3.5" />
+                </span>
+              }
+              hoverHint="进入未分配任务池"
+              emptyText="没有未分配任务"
+              tasks={grouped.unassigned}
               onOpen={openTaskDialog}
               onReorder={handleReorder}
             />
-          ))
+            {members.map((m) => (
+              <OverviewColumn
+                key={m.id}
+                title={m.name}
+                href={`/member/${m.id}`}
+                leading={<MemberAvatar name={m.name} />}
+                hoverHint="进入该成员的工作台"
+                emptyText="手头是空的"
+                tasks={grouped.byMember.get(m.id) ?? []}
+                onOpen={openTaskDialog}
+                onReorder={handleReorder}
+              />
+            ))}
+          </>
         )}
       </div>
 
@@ -208,13 +234,16 @@ export function MembersOverview({
 // 列内任务渲染顺序，跟 STATUS_ORDER 一致；每段独立 DndContext，跨段不允许拖动
 const RENDER_STATUSES: TaskStatus[] = ["doing", "blocked", "todo", "done"];
 
-function MemberColumn({
-  member,
-  tasks,
-  onOpen,
-  onReorder,
-}: {
-  member: MemberDTO;
+interface OverviewColumnProps {
+  title: string;
+  /** 列头点击跳转的目标（成员工作台 / 未分配工作台） */
+  href: string;
+  /** 列头标题左侧的图标（成员头像或未分配 icon） */
+  leading: ReactNode;
+  /** 列头 hover 提示文案 */
+  hoverHint: string;
+  /** 列内无任务时的占位文案 */
+  emptyText: string;
   tasks: TaskDTO[];
   onOpen: (task: TaskDTO) => void;
   onReorder: (
@@ -222,7 +251,18 @@ function MemberColumn({
     targetId: string,
     position: "before" | "after",
   ) => void;
-}) {
+}
+
+function OverviewColumn({
+  title,
+  href,
+  leading,
+  hoverHint,
+  emptyText,
+  tasks,
+  onOpen,
+  onReorder,
+}: OverviewColumnProps) {
   const groups = useMemo(() => {
     const buckets: Record<TaskStatus, TaskDTO[]> = {
       doing: [],
@@ -245,13 +285,13 @@ function MemberColumn({
     <Card className="flex h-full min-h-0 w-[18rem] shrink-0 flex-col">
       <CardHeader className="flex shrink-0 flex-row items-center justify-between gap-2 space-y-0 border-b pb-3">
         <Link
-          href={`/member/${member.id}`}
+          href={href}
           className="flex min-w-0 items-center gap-2 hover:underline"
-          title="进入该成员的工作台"
+          title={hoverHint}
         >
-          <MemberAvatar name={member.name} />
+          {leading}
           <CardTitle className="truncate text-sm font-semibold">
-            {member.name}
+            {title}
           </CardTitle>
           <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
         </Link>
@@ -269,7 +309,7 @@ function MemberColumn({
       <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto pt-3">
         {tasks.length === 0 ? (
           <div className="rounded border border-dashed py-6 text-center text-xs text-muted-foreground">
-            手头是空的
+            {emptyText}
           </div>
         ) : (
           RENDER_STATUSES.map((status) => {

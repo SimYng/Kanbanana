@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -22,11 +22,18 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BoardTaskCard } from "@/components/board-task-card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
 import { STATUS_LABEL, type TaskDTO, type TaskStatus } from "@/lib/types";
 
-const KANBAN_STATUSES: TaskStatus[] = ["doing", "todo", "blocked"];
+const KANBAN_STATUSES: TaskStatus[] = ["doing", "todo", "blocked", "done"];
 const COLUMN_ID_PREFIX = "col:";
 const columnId = (s: TaskStatus) => `${COLUMN_ID_PREFIX}${s}`;
 const parseColumnId = (id: string): TaskStatus | null => {
@@ -34,6 +41,26 @@ const parseColumnId = (id: string): TaskStatus | null => {
   const v = id.slice(COLUMN_ID_PREFIX.length) as TaskStatus;
   return KANBAN_STATUSES.includes(v) ? v : null;
 };
+
+/** "近期已完成"列的时间窗口（按日对齐） */
+type DoneRange = "week" | "halfMonth" | "month";
+
+const DONE_RANGE_OPTIONS: { value: DoneRange; label: string; days: number }[] = [
+  { value: "week", label: "近一周", days: 7 },
+  { value: "halfMonth", label: "近半月", days: 15 },
+  { value: "month", label: "近一月", days: 30 },
+];
+
+function doneRangeCutoff(range: DoneRange): Date {
+  const days =
+    DONE_RANGE_OPTIONS.find((o) => o.value === range)?.days ?? 7;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const cutoff = new Date(todayStart);
+  // 例 days=7：今天 + 往前 6 天的 00:00（含今天共 7 天）
+  cutoff.setDate(cutoff.getDate() - (days - 1));
+  return cutoff;
+}
 
 export type ReorderRequest =
   | {
@@ -45,7 +72,7 @@ export type ReorderRequest =
   | { draggedId: string; targetStatus: TaskStatus };
 
 interface MemberKanbanProps {
-  /** 三列任务（doing + todo + blocked，已经按 assignee 过滤） */
+  /** 全部 visible 任务（含 done，done 列内部会按时间窗口过滤） */
   tasks: TaskDTO[];
   onOpen: (task: TaskDTO) => void;
   /** 提交拖拽结果，由父级调用后端 reorder API */
@@ -58,7 +85,7 @@ interface MemberKanbanProps {
 }
 
 /**
- * 成员工作台的三列 Kanban：进行中 / 待办 / 阻塞中。
+ * 成员工作台的四列 Kanban：进行中 / 待办 / 阻塞中 / 近期已完成。
  *
  * 设计要点：
  *  - 单一 DndContext 包整组列，每列一个 SortableContext + 一个 droppable
@@ -68,6 +95,9 @@ interface MemberKanbanProps {
  *      - 拖到具体 task 上 → targetId + position(+targetStatus if 跨列)
  *      - 拖到空列上 → 仅 targetStatus，服务端把任务放到该列底部
  *  - 用 DragOverlay 渲染被拖卡片，避免多容器场景下原列保留占位导致的视觉抖动。
+ *  - 已完成列特殊：按 completedAt desc 展示 + 列头时间窗口筛选 +
+ *    列内禁止拖动重排（按 completedAt 的语义不适合用户手动排序），
+ *    但仍可作为跨列拖入目标（拖入 = 标记完成）。
  */
 export function MemberKanban({
   tasks,
@@ -75,6 +105,7 @@ export function MemberKanban({
   onReorderRequest,
   onAction,
 }: MemberKanbanProps) {
+  const [doneRange, setDoneRange] = useState<DoneRange>("week");
   const [localTasks, setLocalTasks] = useState<TaskDTO[]>(tasks);
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -84,13 +115,24 @@ export function MemberKanban({
   }, [tasks]);
 
   const columns = useMemo(() => {
-    return KANBAN_STATUSES.map((status) => ({
-      status,
-      tasks: localTasks
-        .filter((t) => t.status === status)
-        .sort((a, b) => a.sortIndex - b.sortIndex),
-    }));
-  }, [localTasks]);
+    const doneCutoff = doneRangeCutoff(doneRange);
+    return KANBAN_STATUSES.map((status) => {
+      const arr = localTasks.filter((t) => t.status === status);
+      if (status === "done") {
+        // 仅展示在时间窗口内完成的，按 completedAt 倒序（最新完成在最前）
+        const filtered = arr.filter(
+          (t) => t.completedAt && new Date(t.completedAt) >= doneCutoff,
+        );
+        filtered.sort(
+          (a, b) =>
+            +new Date(b.completedAt!) - +new Date(a.completedAt!),
+        );
+        return { status, tasks: filtered };
+      }
+      arr.sort((a, b) => a.sortIndex - b.sortIndex);
+      return { status, tasks: arr };
+    });
+  }, [localTasks, doneRange]);
 
   const activeTask = activeId
     ? localTasks.find((t) => t.id === activeId) ?? null
@@ -231,7 +273,7 @@ export function MemberKanban({
         setLocalTasks(tasks);
       }}
     >
-      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-3">
+      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {columns.map((col) => (
           <KanbanColumn
             key={col.status}
@@ -241,7 +283,31 @@ export function MemberKanban({
               activeTask !== null && activeTask.status === col.status
             }
             onOpen={onOpen}
-            onAction={onAction}
+            onAction={col.status === "done" ? undefined : onAction}
+            sortable={col.status !== "done"}
+            headerExtra={
+              col.status === "done" ? (
+                <Select
+                  value={doneRange}
+                  onValueChange={(v) => setDoneRange(v as DoneRange)}
+                >
+                  <SelectTrigger className="h-6 w-[88px] text-[11px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DONE_RANGE_OPTIONS.map((o) => (
+                      <SelectItem
+                        key={o.value}
+                        value={o.value}
+                        className="text-xs"
+                      >
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : undefined
+            }
           />
         ))}
       </div>
@@ -269,6 +335,8 @@ function KanbanColumn({
   isActiveColumn,
   onOpen,
   onAction,
+  sortable = true,
+  headerExtra,
 }: {
   status: TaskStatus;
   tasks: TaskDTO[];
@@ -278,6 +346,10 @@ function KanbanColumn({
     taskId: string,
     action: { kind: "status"; value: TaskStatus },
   ) => void;
+  /** false 时：列内卡片禁止拖动重排（仍可作为跨列拖入目标） */
+  sortable?: boolean;
+  /** 列头标题与计数之间额外的右侧内容，例如时间窗口 Select */
+  headerExtra?: ReactNode;
 }) {
   const theme = STATUS_THEME[status];
   const { setNodeRef, isOver } = useDroppable({ id: columnId(status) });
@@ -291,7 +363,7 @@ function KanbanColumn({
         isOver && !isActiveColumn && cn("ring-2", theme.ring),
       )}
     >
-      <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 pb-3">
+      <CardHeader className="flex shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle
           className={cn(
             "flex items-center gap-2 text-sm font-medium",
@@ -299,20 +371,25 @@ function KanbanColumn({
           )}
         >
           <span className={cn("inline-block h-2 w-2 rounded-full", theme.dot)} />
-          {STATUS_LABEL[status]}
+          {status === "done" ? "近期已完成" : STATUS_LABEL[status]}
         </CardTitle>
-        <Badge variant="muted" className="font-normal tabular-nums">
-          {tasks.length}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {headerExtra}
+          <Badge variant="muted" className="font-normal tabular-nums">
+            {tasks.length}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto pt-0">
         <SortableContext
-          items={tasks.map((t) => t.id)}
+          // sortable=false 时 items 留空，dnd-kit 不把卡片纳入排序参与者，
+          // 但 column 本身的 useDroppable 仍能接收跨列拖入。
+          items={sortable ? tasks.map((t) => t.id) : []}
           strategy={verticalListSortingStrategy}
         >
           {tasks.length === 0 ? (
             <div className="rounded border border-dashed py-6 text-center text-xs text-muted-foreground">
-              拖到这里
+              {sortable ? "拖到这里" : "近期没有完成"}
             </div>
           ) : (
             tasks.map((t) => (
@@ -323,6 +400,7 @@ function KanbanColumn({
                 showProject
                 onOpen={onOpen}
                 onAction={onAction}
+                nonSortable={!sortable}
               />
             ))
           )}

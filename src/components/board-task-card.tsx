@@ -51,6 +51,9 @@ interface BoardTaskCardProps {
   showProject?: boolean;
   /** 卡片左侧加状态色条。配合 showProject 用于"列本身没有状态颜色"的场景 */
   showStatusBar?: boolean;
+  /** 禁用列内拖动排序：useSortable disabled + 隐藏 drag handle。
+   *  用于"已完成"等按 completedAt 展示的只读列，仍可作为跨列拖入的目标。 */
+  nonSortable?: boolean;
 }
 
 /**
@@ -71,6 +74,7 @@ export function BoardTaskCard({
   hideAssignee,
   showProject,
   showStatusBar,
+  nonSortable,
 }: BoardTaskCardProps) {
   const {
     attributes,
@@ -79,7 +83,7 @@ export function BoardTaskCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task.id, disabled: nonSortable });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -107,16 +111,18 @@ export function BoardTaskCard({
     >
       <CardContent className="space-y-1 p-2.5">
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            className="cursor-grab touch-none rounded p-0.5 text-muted-foreground/60 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
-            aria-label="拖动排序"
-            onClick={(e) => e.stopPropagation()}
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
+          {!nonSortable && (
+            <button
+              type="button"
+              className="cursor-grab touch-none rounded p-0.5 text-muted-foreground/60 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+              aria-label="拖动排序"
+              onClick={(e) => e.stopPropagation()}
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </button>
+          )}
           <PriorityBadge priority={task.priority} short />
           {!hideAssignee && task.assignee && (
             <span className="shrink-0 text-[11px] text-muted-foreground">

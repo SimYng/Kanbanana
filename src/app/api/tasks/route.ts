@@ -39,9 +39,17 @@ export async function GET(req: Request) {
       status: searchParams.get("status") ?? undefined,
     });
 
+    // 约定：assigneeId="none" 表示「未分配负责人」（assigneeId IS NULL），
+    //       供未分配池视图使用；其它字符串走精确匹配。
+    const assigneeWhere = params.assigneeId
+      ? params.assigneeId === "none"
+        ? { assigneeId: null }
+        : { assigneeId: params.assigneeId }
+      : {};
+
     const tasks = await prisma.task.findMany({
       where: {
-        ...(params.assigneeId ? { assigneeId: params.assigneeId } : {}),
+        ...assigneeWhere,
         ...(params.projectId ? { projectId: params.projectId } : {}),
         ...(params.status ? { status: params.status } : {}),
       },

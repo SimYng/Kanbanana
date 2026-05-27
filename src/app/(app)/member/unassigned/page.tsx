@@ -1,18 +1,19 @@
 import { prisma } from "@/lib/db";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
 import type { MemberDTO, ProjectDTO, ProjectColor } from "@/lib/types";
-import { MembersOverview } from "./members-overview";
+import { MemberWorkbench } from "../[id]/workbench";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 成员总览页：每个非管理员一列横向并排，全员手头任务一屏对照。
+ * 「未分配」工作台：展示所有 assigneeId IS NULL 的任务，
+ * 供管理员把任务派给具体成员前集中查看 / 整理。
  *
- * 静态段 `overview` 在 Next.js 路由中优先于 `[id]`，
- * 因此与 /member/[id] 共存不会冲突。
+ * 静态段 `unassigned` 在 Next.js 路由匹配中优先于 `[id]`，
+ * 因此与 /member/[id] 共存不会冲突（同 /member/overview 套路）。
  */
-export default async function MembersOverviewPage() {
-  const [members, projects, tasks] = await Promise.all([
+export default async function UnassignedPage() {
+  const [allMembers, projects, tasks] = await Promise.all([
     prisma.user.findMany({
       where: { role: "member" },
       orderBy: { createdAt: "asc" },
@@ -20,14 +21,14 @@ export default async function MembersOverviewPage() {
     prisma.project.findMany({
       orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
     }),
-    // 同时拉取「已分配」和「未分配」任务：未分配单独成一列展示
     prisma.task.findMany({
+      where: { assigneeId: null },
       include: TASK_INCLUDE,
       orderBy: { sortIndex: "asc" },
     }),
   ]);
 
-  const memberDtos: MemberDTO[] = members.map((m) => ({
+  const memberDtos: MemberDTO[] = allMembers.map((m) => ({
     id: m.id,
     name: m.name,
     email: m.email,
@@ -42,8 +43,9 @@ export default async function MembersOverviewPage() {
   }));
 
   return (
-    <MembersOverview
-      members={memberDtos}
+    <MemberWorkbench
+      member={null}
+      allMembers={memberDtos}
       projects={projectDtos}
       initialTasks={tasks.map(serializeTask)}
     />

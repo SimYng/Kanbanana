@@ -3,30 +3,26 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  AlertTriangle,
-  CheckCircle2,
-  Inbox,
-  PlayCircle,
-} from "lucide-react";
+import { ArrowLeft, Inbox } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MemberAvatar } from "@/components/member-avatar";
 import { TaskDialog } from "@/components/task-dialog";
 import { NewTaskDialog } from "@/components/new-task-dialog";
 import { BlockReasonDialog } from "@/components/block-reason-dialog";
-import { MemberSwitcher } from "@/components/member-switcher";
+import {
+  MemberSwitcher,
+  UNASSIGNED_NAV_ID,
+} from "@/components/member-switcher";
 import { MemberKanban, type ReorderRequest } from "./member-kanban";
 import { apiFetch } from "@/lib/fetcher";
-import { cn, isTaskVisible, isToday } from "@/lib/utils";
+import { isTaskVisible } from "@/lib/utils";
 import { type MemberDTO, type ProjectDTO, type TaskDTO, type TaskStatus } from "@/lib/types";
 
 interface WorkbenchProps {
-  member: MemberDTO;
+  /** null 表示「未分配池」视图：展示所有 assigneeId IS NULL 的任务 */
+  member: MemberDTO | null;
   allMembers: MemberDTO[];
   projects: ProjectDTO[];
   initialTasks: TaskDTO[];
@@ -44,27 +40,17 @@ export function MemberWorkbench({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [blockingTask, setBlockingTask] = useState<TaskDTO | null>(null);
 
-  const { doing, todo, blocked, done, doneToday, kanbanTasks } = useMemo(() => {
-    // 归档项目里未完成的任务视为「作废」，不在工作台展示；
-    // 已完成的任务仍保留，作为历史业绩。
-    const visible = tasks.filter(isTaskVisible);
-    const doingArr = visible.filter((t) => t.status === "doing");
-    const todoArr = visible.filter((t) => t.status === "todo");
-    const blockedArr = visible.filter((t) => t.status === "blocked");
-    const doneAll = visible.filter((t) => t.status === "done");
-    return {
-      doing: doingArr,
-      todo: todoArr,
-      blocked: blockedArr,
-      done: doneAll,
-      doneToday: doneAll.filter((t) => isToday(t.completedAt)),
-      // Kanban 三列任务集合（不含 done，done 折叠在底部）
-      kanbanTasks: [...doingArr, ...todoArr, ...blockedArr],
-    };
-  }, [tasks]);
+  // 归档项目里未完成的任务视为「作废」，不在工作台展示；
+  // 已完成的任务仍保留，作为历史业绩（由 MemberKanban 的"近期已完成"列承担展示）。
+  // 进行中/待办/阻塞中/近期已完成的分桶 + 时间筛选交给 MemberKanban 内部完成。
+  const kanbanTasks = useMemo(() => tasks.filter(isTaskVisible), [tasks]);
+
+  // 未分配视图用 `assigneeId=none` 查询（约定见 /api/tasks GET）。
+  const refreshQuery = member ? `assigneeId=${member.id}` : "assigneeId=none";
+  const ownerId: string | null = member?.id ?? null;
 
   async function refresh() {
-    const next = await apiFetch<TaskDTO[]>(`/api/tasks?assigneeId=${member.id}`);
+    const next = await apiFetch<TaskDTO[]>(`/api/tasks?${refreshQuery}`);
     setTasks(next);
   }
 
@@ -155,15 +141,31 @@ export function MemberWorkbench({
             </Link>
           </Button>
           <Separator orientation="vertical" className="h-6" />
-          <MemberAvatar name={member.name} />
-          <h1 className="text-xl font-semibold tracking-tight">
-            {member.name} 的工作台
-          </h1>
+          {member ? (
+            <>
+              <MemberAvatar name={member.name} />
+              <h1 className="text-xl font-semibold tracking-tight">
+                {member.name} 的工作台
+              </h1>
+            </>
+          ) : (
+            <>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <Inbox className="h-4 w-4" />
+              </span>
+              <h1 className="text-xl font-semibold tracking-tight">
+                未分配任务
+              </h1>
+              <span className="text-xs text-muted-foreground">
+                没有指派负责人 · 待管理员排活
+              </span>
+            </>
+          )}
           <div className="ml-auto">
             <NewTaskDialog
               projects={projects.filter((p) => !p.archived)}
               members={allMembers}
-              defaultAssigneeId={member.id}
+              defaultAssigneeId={ownerId ?? undefined}
               onCreated={(created) => {
                 patchLocal(created);
                 router.refresh();
@@ -174,31 +176,9 @@ export function MemberWorkbench({
         </div>
 
         <MemberSwitcher
-          currentId={member.id}
+          currentId={member?.id ?? UNASSIGNED_NAV_ID}
           members={allMembers}
           disabled={dialogOpen || !!blockingTask}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <CompactStat
-          label="进行中"
-          value={doing.length}
-          tone={doing.length > 0 ? "info" : undefined}
-          icon={PlayCircle}
-        />
-        <CompactStat label="待办" value={todo.length} icon={Inbox} />
-        <CompactStat
-          label="阻塞中"
-          value={blocked.length}
-          tone={blocked.length ? "warn" : undefined}
-          icon={AlertTriangle}
-        />
-        <CompactStat
-          label="今日已完成"
-          value={doneToday.length}
-          tone="success"
-          icon={CheckCircle2}
         />
       </div>
 
@@ -209,32 +189,6 @@ export function MemberWorkbench({
         onReorderRequest={handleReorderRequest}
       />
 
-      {done.length > 0 && (
-        <details className="group rounded-lg border">
-          <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium">
-            <CheckCircle2 className="h-4 w-4 text-success" />
-            已完成
-            <Badge variant="muted" className="font-normal">
-              {done.length}
-            </Badge>
-            <span className="ml-auto text-xs text-muted-foreground group-open:hidden">
-              展开
-            </span>
-            <span className="ml-auto hidden text-xs text-muted-foreground group-open:inline">
-              收起
-            </span>
-          </summary>
-          <div className="space-y-1 border-t p-3 text-xs">
-            {done.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 text-muted-foreground">
-                <span className="line-through">{t.title}</span>
-                <span>· {t.project.name}</span>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-
       <TaskDialog
         open={dialogOpen}
         task={openTask}
@@ -242,7 +196,9 @@ export function MemberWorkbench({
         projects={projects}
         members={allMembers}
         onUpdated={(updated) => {
-          if (updated.assigneeId !== member.id) {
+          // 任务负责人变化 → 已不属于本视图：从本地列表移除
+          const stillBelongs = (updated.assigneeId ?? null) === ownerId;
+          if (!stillBelongs) {
             setTasks((prev) => prev.filter((t) => t.id !== updated.id));
           } else {
             patchLocal(updated);
@@ -265,41 +221,3 @@ export function MemberWorkbench({
     </div>
   );
 }
-
-function CompactStat({
-  label,
-  value,
-  tone,
-  icon: Icon,
-}: {
-  label: string;
-  value: number | string;
-  tone?: "info" | "warn" | "success";
-  icon?: React.ComponentType<{ className?: string }>;
-}) {
-  const toneClass =
-    tone === "info"
-      ? "text-info"
-      : tone === "warn"
-        ? "text-warn"
-        : tone === "success"
-          ? "text-success"
-          : "text-foreground";
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-2 p-3">
-        {Icon && <Icon className={cn("h-4 w-4", toneClass)} />}
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <span
-          className={cn(
-            "ml-auto text-xl font-semibold leading-none tabular-nums",
-            toneClass,
-          )}
-        >
-          {value}
-        </span>
-      </CardContent>
-    </Card>
-  );
-}
-

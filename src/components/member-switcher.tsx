@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LayoutGrid } from "lucide-react";
+import { Inbox, LayoutGrid } from "lucide-react";
 import { MemberAvatar } from "@/components/member-avatar";
 import { cn } from "@/lib/utils";
 import type { MemberDTO } from "@/lib/types";
@@ -12,8 +12,7 @@ import type { MemberDTO } from "@/lib/types";
  * 成员工作台 / 成员总览页公用的顶部切换栏。
  *
  * 行为：
- *  - 第一个 chip 永远是「总览」（/member/overview）
- *  - 其后是所有非 admin 成员的 chip
+ *  - 顺序：「总览」→「未分配」→ 各成员
  *  - 当前页对应的 chip 高亮
  *  - 注册全局 ←/→ keydown 在序列里循环跳转
  *
@@ -23,9 +22,10 @@ import type { MemberDTO } from "@/lib/types";
  *  - 父级显式传 disabled（如弹窗打开时）
  */
 export const OVERVIEW_NAV_ID = "__overview__";
+export const UNASSIGNED_NAV_ID = "__unassigned__";
 
 interface MemberSwitcherProps {
-  /** `OVERVIEW_NAV_ID` 或某个 member.id */
+  /** `OVERVIEW_NAV_ID` / `UNASSIGNED_NAV_ID` 或某个 member.id */
   currentId: string;
   members: MemberDTO[];
   /** 弹窗打开等场景需要临时禁用键盘导航 */
@@ -48,6 +48,7 @@ export function MemberSwitcher({
   const targets = useMemo(
     () => [
       { id: OVERVIEW_NAV_ID, href: "/member/overview" },
+      { id: UNASSIGNED_NAV_ID, href: "/member/unassigned" },
       ...switchable.map((m) => ({ id: m.id, href: `/member/${m.id}` })),
     ],
     [switchable],
@@ -94,6 +95,13 @@ export function MemberSwitcher({
       >
         <LayoutGrid className="h-3.5 w-3.5" />
         总览
+      </SwitcherChip>
+      <SwitcherChip
+        href="/member/unassigned"
+        active={currentId === UNASSIGNED_NAV_ID}
+      >
+        <Inbox className="h-3.5 w-3.5" />
+        未分配
       </SwitcherChip>
       <span className="text-muted-foreground/30">|</span>
       {switchable.map((m) => (
