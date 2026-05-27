@@ -170,6 +170,15 @@ export default async function TeamPage() {
         <h1 className="text-2xl font-semibold tracking-tight">团队总览</h1>
       </div>
 
+      {/*
+        第一行 3 卡片：以「工作量分布」的内容高度为 row 高度基准，
+        另外两个截止任务面板若任务多于工作量分布的行数 → 卡片内滚动，不撑高 row。
+
+        实现技巧：与下面成员工作量 / 项目进度那行一致：
+         - WorkloadSummary 走 normal flow，决定 row 高度
+         - 另外两个用 relative 占位 + absolute 撑满 row（脱离 row 高度计算）
+         - 小屏（< lg）单列堆叠时不启用 absolute，恢复自然文档流，避免高度坍塌
+      */}
       <div className="grid gap-3 lg:grid-cols-3">
         <WorkloadSummary
           doing={overall.doing}
@@ -183,22 +192,30 @@ export default async function TeamPage() {
           blockedSeries={statusSeries.blocked}
           todoSeries={statusSeries.todo}
         />
-        <PreviewPanel
-          icon={CalendarDays}
-          title="今日任务"
-          subtitle="逾期 + 今天到期"
-          totalCount={todayPool.length}
-          groups={todayGroups}
-          emptyHint="今日没有需要冲的截止任务 🎉"
-        />
-        <PreviewPanel
-          icon={ListTodo}
-          title="未来 7 天"
-          subtitle="按日聚合"
-          totalCount={weekPool.length}
-          groups={weekGroups}
-          emptyHint="未来一周没有截止任务"
-        />
+        <div className="lg:relative">
+          <div className="lg:absolute lg:inset-0 lg:flex">
+            <PreviewPanel
+              icon={CalendarDays}
+              title="今日任务"
+              subtitle="逾期 + 今天到期"
+              totalCount={todayPool.length}
+              groups={todayGroups}
+              emptyHint="今日没有需要冲的截止任务 🎉"
+            />
+          </div>
+        </div>
+        <div className="lg:relative">
+          <div className="lg:absolute lg:inset-0 lg:flex">
+            <PreviewPanel
+              icon={ListTodo}
+              title="未来 7 天"
+              subtitle="按日聚合"
+              totalCount={weekPool.length}
+              groups={weekGroups}
+              emptyHint="未来一周没有截止任务"
+            />
+          </div>
+        </div>
       </div>
 
       {/*
@@ -475,7 +492,10 @@ function PreviewPanel({
   emptyHint: string;
 }) {
   return (
-    <Card className="flex flex-col">
+    // lg+ 处于 row-absolute 容器内：用 flex-1 + min-h-0 撑满父级，
+    // 让 CardContent 的 overflow-y-auto 在 row 内部生效。
+    // 小屏单列堆叠时仍保留 max-h 兜底，避免一个超长列表把页面拉得很长。
+    <Card className="flex w-full flex-col lg:min-h-0 lg:flex-1">
       <PanelHeader
         icon={icon}
         title={title}
@@ -486,7 +506,7 @@ function PreviewPanel({
           </Badge>
         }
       />
-      <CardContent className="max-h-[24rem] flex-1 space-y-3 overflow-y-auto pt-3">
+      <CardContent className="max-h-[24rem] min-h-0 flex-1 space-y-4 overflow-y-auto pt-3 lg:max-h-none">
         {groups.length === 0 ? (
           <div className="py-6 text-center text-xs text-muted-foreground">
             {emptyHint}
@@ -501,21 +521,32 @@ function PreviewPanel({
 
 function DayGroupSection({ group }: { group: DayGroup }) {
   return (
-    <div className="space-y-0.5">
-      <div
+    <section className="space-y-1">
+      {/*
+        日期分组标题：
+         - 字号 / 颜色都比任务行更"标题化"，避免和正文混成一团灰
+         - 底部一根淡分割线代替留白，组与组之间靠空白 + 线分割
+         - danger 组（已过期）整组色调泛红，便于一眼区分
+      */}
+      <header
         className={cn(
-          "flex items-center gap-2 px-1 text-xs font-medium",
-          group.tone === "danger" ? "text-destructive" : "text-muted-foreground",
+          "flex items-baseline justify-between border-b border-border/60 px-1 pb-1 text-[12px] font-semibold tracking-tight",
+          group.tone === "danger"
+            ? "border-destructive/30 text-destructive"
+            : "text-foreground/80",
         )}
       >
         <span>{group.label}</span>
-      </div>
-      <div className="space-y-0.5">
+        <span className="text-[10px] font-normal tabular-nums text-muted-foreground/70">
+          {group.tasks.length}
+        </span>
+      </header>
+      <ul className="space-y-0.5">
         {group.tasks.map((t) => (
           <PreviewItem key={t.id} task={t} />
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }
 
@@ -528,30 +559,39 @@ const DUE_TONE_CLASS = {
 function PreviewItem({ task }: { task: TaskDTO }) {
   const due = formatDueLabel(task.dueDate);
   return (
-    <Link
-      href={`/project/${task.projectId}`}
-      className="block rounded-md px-1.5 py-1 transition-colors hover:bg-accent/50"
-    >
-      <div className="flex items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
-          {task.title}
-        </span>
-        {due && (
-          <span
-            className={cn(
-              "shrink-0 text-[10px] tabular-nums",
-              DUE_TONE_CLASS[due.tone],
-            )}
-          >
-            {due.label}
+    <li>
+      <Link
+        href={`/project/${task.projectId}`}
+        className="block rounded-md px-1.5 py-1 transition-colors hover:bg-accent/50"
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-tight">
+            {task.title}
           </span>
-        )}
-      </div>
-      <div className="mt-0.5 flex items-center gap-1.5 pl-0.5 text-[11px] text-muted-foreground">
-        <ProjectPill name={task.project.name} />
-        <span className="text-muted-foreground/40">·</span>
-        <span className="truncate">{task.assignee?.name ?? "未分配"}</span>
-      </div>
-    </Link>
+          {due && (
+            <span
+              className={cn(
+                "shrink-0 text-[10px] tabular-nums",
+                DUE_TONE_CLASS[due.tone],
+              )}
+            >
+              {due.label}
+            </span>
+          )}
+        </div>
+        {/*
+          二级元信息：项目 · 负责人。
+          以前 · 用 muted/40 在浅色主题上几乎不可见，整行看着像挤一团；
+          统一用 muted-foreground/60，并显式 leading 与 nbsp 控制呼吸感。
+        */}
+        <div className="mt-0.5 flex items-center gap-1.5 pl-0.5 text-[11px] leading-tight text-muted-foreground">
+          <span className="min-w-0 truncate">{task.project.name}</span>
+          <span aria-hidden className="text-muted-foreground/50">
+            ·
+          </span>
+          <span className="shrink-0">{task.assignee?.name ?? "未分配"}</span>
+        </div>
+      </Link>
+    </li>
   );
 }
