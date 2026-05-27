@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { ChevronRight, AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Inbox,
+  ListTodo,
+  PlayCircle,
+} from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +15,8 @@ import { MemberAvatar } from "@/components/member-avatar";
 import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
-import { isTaskVisible, isToday } from "@/lib/utils";
-import { PROJECT_COLOR_HEX, type ProjectColor } from "@/lib/types";
+import { cn, formatDueLabel, isTaskVisible, isToday } from "@/lib/utils";
+import { PROJECT_COLOR_HEX, type ProjectColor, type TaskDTO } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +56,30 @@ export default async function TeamPage() {
   });
 
   const blockedTasks = tasks.filter((t) => t.status === "blocked");
-  const doingTotal = memberRows.reduce((s, w) => s + w.doingCount, 0);
-  const doneTodayTotal = memberRows.reduce((s, w) => s + w.doneToday, 0);
+  const openTasks = tasks.filter((t) => t.status !== "done");
+
+  // 全局工作量统计（顶部第一列用）
+  const overall = {
+    doing: openTasks.filter((t) => t.status === "doing").length,
+    blocked: blockedTasks.length,
+    todo: openTasks.filter((t) => t.status === "todo").length,
+  };
+
+  // 时间边界（本地时区，按"天"对齐）
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const weekEndExclusive = new Date(todayStart);
+  weekEndExclusive.setDate(weekEndExclusive.getDate() + 7);
+
+  // 截止日期池
+  const withDue = openTasks.filter((t) => t.dueDate);
+  const todayPool = withDue.filter((t) => new Date(t.dueDate!) < tomorrowStart);
+  const weekPool = withDue.filter((t) => new Date(t.dueDate!) < weekEndExclusive);
+
+  const todayGroups = groupByDay(todayPool, todayStart, tomorrowStart);
+  const weekGroups = groupByDay(weekPool, todayStart, tomorrowStart);
 
   return (
     <div className="space-y-8">
@@ -57,18 +87,27 @@ export default async function TeamPage() {
         <h1 className="text-2xl font-semibold tracking-tight">团队总览</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="团队成员" value={members.length} />
-        <StatCard label="进行中总数" value={doingTotal} tone="info" />
-        <StatCard
-          label="阻塞任务"
-          value={blockedTasks.length}
-          tone={blockedTasks.length ? "warn" : undefined}
+      <div className="grid gap-3 lg:grid-cols-3">
+        <WorkloadSummary
+          doing={overall.doing}
+          blocked={overall.blocked}
+          todo={overall.todo}
         />
-        <StatCard
-          label="今日已完成"
-          value={doneTodayTotal}
-          tone={doneTodayTotal > 0 ? "success" : undefined}
+        <PreviewPanel
+          icon={CalendarDays}
+          title="今日任务"
+          subtitle="逾期 + 今天到期"
+          totalCount={todayPool.length}
+          groups={todayGroups}
+          emptyHint="今日没有需要冲的截止任务 🎉"
+        />
+        <PreviewPanel
+          icon={ListTodo}
+          title="未来 7 天"
+          subtitle="按日聚合"
+          totalCount={weekPool.length}
+          groups={weekGroups}
+          emptyHint="未来一周没有截止任务"
         />
       </div>
 
@@ -223,31 +262,262 @@ export default async function TeamPage() {
   );
 }
 
-function StatCard({
+// ───────────────────────── 顶部第一列：工作量分布 ─────────────────────────
+
+function WorkloadSummary({
+  doing,
+  blocked,
+  todo,
+}: {
+  doing: number;
+  blocked: number;
+  todo: number;
+}) {
+  return (
+    <Card className="flex flex-col">
+      <PanelHeader icon={CheckCircle2} title="工作量分布" />
+      <CardContent className="flex flex-1 flex-col justify-around gap-2 pt-3">
+        <WorkloadRow icon={PlayCircle} label="进行中" value={doing} tone="info" />
+        <WorkloadRow
+          icon={AlertTriangle}
+          label="阻塞"
+          value={blocked}
+          tone={blocked > 0 ? "warn" : undefined}
+        />
+        <WorkloadRow icon={Inbox} label="待办" value={todo} />
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * 顶部 3 列共用的卡片表头：粗体标题 + 底边线分隔，避免与下方子项标题混淆
+ */
+function PanelHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  rightSlot,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle?: string;
+  rightSlot?: React.ReactNode;
+}) {
+  return (
+    <CardHeader className="flex-row items-center justify-between space-y-0 border-b pb-3">
+      <CardTitle className="flex items-baseline gap-2 text-sm font-semibold text-foreground">
+        <Icon className="h-4 w-4 self-center text-muted-foreground" />
+        {title}
+        {subtitle && (
+          <span className="text-[11px] font-normal text-muted-foreground/70">
+            · {subtitle}
+          </span>
+        )}
+      </CardTitle>
+      {rightSlot}
+    </CardHeader>
+  );
+}
+
+const TONE_TEXT = {
+  info: "text-info",
+  warn: "text-warn",
+  muted: "text-muted-foreground",
+} as const;
+
+function WorkloadRow({
+  icon: Icon,
   label,
   value,
   tone,
 }: {
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
-  tone?: "info" | "warn" | "success" | "destructive";
+  tone?: "info" | "warn";
 }) {
-  const toneClass =
-    tone === "info"
-      ? "text-info"
-      : tone === "warn"
-        ? "text-warn"
-        : tone === "success"
-          ? "text-success"
-          : tone === "destructive"
-            ? "text-destructive"
-            : "text-foreground";
+  const colorClass = tone ? TONE_TEXT[tone] : "text-foreground";
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className={`text-2xl font-semibold tabular-nums ${toneClass}`}>{value}</div>
-        <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Icon className={cn("h-4 w-4", colorClass)} />
+        {label}
+      </div>
+      <div className={cn("text-2xl font-semibold tabular-nums", colorClass)}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── 顶部第二/三列：截止任务预览 ─────────────────────────
+
+type DayGroup = { key: string; label: string; tone?: "danger"; tasks: TaskDTO[] };
+
+const WEEK_DAY = ["日", "一", "二", "三", "四", "五", "六"];
+
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function formatDayLabel(date: Date, todayStart: Date, tomorrowStart: Date): string {
+  const dayName = WEEK_DAY[date.getDay()];
+  if (dayKey(date) === dayKey(todayStart)) return `今日 (周${dayName})`;
+  if (dayKey(date) === dayKey(tomorrowStart)) return `明日 (周${dayName})`;
+  return `${date.getMonth() + 1}月${date.getDate()}日 (周${dayName})`;
+}
+
+/**
+ * 把带 dueDate 的任务按"日"分组：
+ *  - 早于今天 → 单独聚到「已过期」组，置顶
+ *  - 其它按日聚合，按日期升序排列
+ *  组内任务再按 dueDate 升序
+ */
+function groupByDay(
+  tasks: TaskDTO[],
+  todayStart: Date,
+  tomorrowStart: Date,
+): DayGroup[] {
+  const overdue: TaskDTO[] = [];
+  const buckets = new Map<string, { date: Date; tasks: TaskDTO[] }>();
+
+  for (const t of tasks) {
+    const d = new Date(t.dueDate!);
+    if (d < todayStart) {
+      overdue.push(t);
+      continue;
+    }
+    const dayOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const k = dayKey(dayOnly);
+    const bucket = buckets.get(k);
+    if (bucket) bucket.tasks.push(t);
+    else buckets.set(k, { date: dayOnly, tasks: [t] });
+  }
+
+  const byDue = (a: TaskDTO, b: TaskDTO) =>
+    +new Date(a.dueDate!) - +new Date(b.dueDate!);
+
+  const result: DayGroup[] = [];
+  if (overdue.length > 0) {
+    overdue.sort(byDue);
+    result.push({
+      key: "overdue",
+      label: `已过期 (${overdue.length})`,
+      tone: "danger",
+      tasks: overdue,
+    });
+  }
+
+  const sortedBuckets = Array.from(buckets.entries()).sort(
+    (a, b) => +a[1].date - +b[1].date,
+  );
+  for (const [k, v] of sortedBuckets) {
+    v.tasks.sort(byDue);
+    result.push({
+      key: k,
+      label: formatDayLabel(v.date, todayStart, tomorrowStart),
+      tasks: v.tasks,
+    });
+  }
+
+  return result;
+}
+
+function PreviewPanel({
+  icon,
+  title,
+  subtitle,
+  totalCount,
+  groups,
+  emptyHint,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle: string;
+  totalCount: number;
+  groups: DayGroup[];
+  emptyHint: string;
+}) {
+  return (
+    <Card className="flex flex-col">
+      <PanelHeader
+        icon={icon}
+        title={title}
+        subtitle={subtitle}
+        rightSlot={
+          <Badge variant="muted" className="font-normal tabular-nums">
+            {totalCount}
+          </Badge>
+        }
+      />
+      <CardContent className="max-h-[24rem] flex-1 space-y-3 overflow-y-auto pt-3">
+        {groups.length === 0 ? (
+          <div className="py-6 text-center text-xs text-muted-foreground">
+            {emptyHint}
+          </div>
+        ) : (
+          groups.map((g) => <DayGroupSection key={g.key} group={g} />)
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+function DayGroupSection({ group }: { group: DayGroup }) {
+  return (
+    <div className="space-y-0.5">
+      <div
+        className={cn(
+          "flex items-center gap-2 px-1 text-xs font-medium",
+          group.tone === "danger" ? "text-destructive" : "text-muted-foreground",
+        )}
+      >
+        <span>{group.label}</span>
+      </div>
+      <div className="space-y-0.5">
+        {group.tasks.map((t) => (
+          <PreviewItem key={t.id} task={t} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const DUE_TONE_CLASS = {
+  danger: "text-destructive",
+  warn: "text-warn",
+  muted: "text-muted-foreground",
+} as const;
+
+function PreviewItem({ task }: { task: TaskDTO }) {
+  const due = formatDueLabel(task.dueDate);
+  return (
+    <Link
+      href={`/project/${task.projectId}`}
+      className="block rounded-md px-1.5 py-1 transition-colors hover:bg-accent/50"
+    >
+      <div className="flex items-center gap-1.5">
+        <PriorityBadge priority={task.priority} short />
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
+          {task.title}
+        </span>
+        {due && (
+          <span
+            className={cn(
+              "shrink-0 text-[10px] tabular-nums",
+              DUE_TONE_CLASS[due.tone],
+            )}
+          >
+            {due.label}
+          </span>
+        )}
+      </div>
+      <div className="mt-0.5 flex items-center gap-1.5 pl-0.5 text-[11px] text-muted-foreground">
+        <ProjectPill name={task.project.name} color={task.project.color} />
+        <span className="text-muted-foreground/40">·</span>
+        <span className="truncate">{task.assignee?.name ?? "未分配"}</span>
+      </div>
+    </Link>
   );
 }
