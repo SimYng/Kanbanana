@@ -7,7 +7,7 @@ import {
   needsRebalance,
   rebalance,
 } from "@/lib/sort-index";
-import { type ProjectColor, type ProjectDTO } from "@/lib/types";
+import type { ProjectDTO } from "@/lib/types";
 
 /**
  * 项目拖拽排序 API（admin 专属）。
@@ -66,7 +66,6 @@ export async function POST(req: Request) {
     const toDTO = (p: typeof updated): ProjectDTO => ({
       id: p.id,
       name: p.name,
-      color: p.color as ProjectColor,
       archived: p.archived,
       isDefault: p.isDefault,
       categoryId: p.categoryId,

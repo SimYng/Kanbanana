@@ -1,14 +1,6 @@
 export type TaskStatus = "todo" | "doing" | "blocked" | "done";
 export type TaskPriority = "P0" | "P1" | "P2" | "P3";
 export type UserRole = "admin" | "member";
-export type ProjectColor =
-  | "blue"
-  | "purple"
-  | "green"
-  | "orange"
-  | "pink"
-  | "yellow"
-  | "gray";
 
 export const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "blocked", "done"];
 export const TASK_PRIORITIES: TaskPriority[] = ["P0", "P1", "P2", "P3"];
@@ -25,26 +17,6 @@ export const PRIORITY_LABEL: Record<TaskPriority, string> = {
   P1: "P1 高",
   P2: "P2 中",
   P3: "P3 低",
-};
-
-export const PROJECT_COLORS: ProjectColor[] = [
-  "blue",
-  "purple",
-  "green",
-  "orange",
-  "pink",
-  "yellow",
-  "gray",
-];
-
-export const PROJECT_COLOR_HEX: Record<ProjectColor, string> = {
-  blue: "#3b82f6",
-  purple: "#a855f7",
-  green: "#22c55e",
-  orange: "#f97316",
-  pink: "#ec4899",
-  yellow: "#eab308",
-  gray: "#737373",
 };
 
 export interface TaskDTO {
@@ -66,7 +38,6 @@ export interface TaskDTO {
   project: {
     id: string;
     name: string;
-    color: ProjectColor;
     archived: boolean;
     isDefault: boolean;
     categoryId: string;
@@ -86,7 +57,6 @@ export interface MemberDTO {
 export interface ProjectDTO {
   id: string;
   name: string;
-  color: ProjectColor;
   archived: boolean;
   /** 默认项目（如「收集箱」）：禁止删除 / 归档。系统中至多一个。 */
   isDefault: boolean;
@@ -97,7 +67,6 @@ export interface ProjectDTO {
 export interface ProjectCategoryDTO {
   id: string;
   name: string;
-  color: ProjectColor;
   /** 默认分类（「未分类」）：禁止删除。系统中至多一个。 */
   isDefault: boolean;
   sortIndex: number;

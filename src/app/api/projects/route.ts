@@ -3,11 +3,10 @@ import { prisma } from "@/lib/db";
 import { requireUser, requireAdmin } from "@/lib/session";
 import { handleError, okJson } from "@/lib/api";
 import { appendSortIndex } from "@/lib/sort-index";
-import { PROJECT_COLORS, type ProjectColor, type ProjectDTO } from "@/lib/types";
+import type { ProjectDTO } from "@/lib/types";
 
 const CreateInput = z.object({
   name: z.string().min(1).max(100),
-  color: z.enum(PROJECT_COLORS as [ProjectColor, ...ProjectColor[]]).default("blue"),
   /** 所属分类 id；未传则归入默认分类（「未分类」）。 */
   categoryId: z.string().min(1).optional(),
 });
@@ -21,7 +20,6 @@ export async function GET() {
     const out: ProjectDTO[] = projects.map((p) => ({
       id: p.id,
       name: p.name,
-      color: p.color as ProjectColor,
       archived: p.archived,
       isDefault: p.isDefault,
       categoryId: p.categoryId,
@@ -60,7 +58,6 @@ export async function POST(req: Request) {
     const project = await prisma.project.create({
       data: {
         name: data.name,
-        color: data.color,
         categoryId,
         sortIndex: appendSortIndex(activeSiblings),
       },
@@ -69,7 +66,6 @@ export async function POST(req: Request) {
       {
         id: project.id,
         name: project.name,
-        color: project.color as ProjectColor,
         archived: project.archived,
         isDefault: project.isDefault,
         categoryId: project.categoryId,

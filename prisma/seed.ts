@@ -52,7 +52,6 @@ async function main() {
     create: {
       id: "default-category",
       name: "未分类",
-      color: "gray",
       isDefault: true,
       sortIndex: 0,
     },
@@ -67,36 +66,29 @@ async function main() {
     create: {
       id: "default-misc",
       name: "收集箱",
-      color: "gray",
       isDefault: true,
       sortIndex: 0,
       categoryId: "default-category",
     },
   });
 
-  const projectDefs = [
-    { name: "官网改版", color: "blue" },
-    { name: "移动端 App", color: "purple" },
-    { name: "数据看板", color: "green" },
-    { name: "内部 CRM", color: "orange" },
-  ];
+  const projectDefs = ["官网改版", "移动端 App", "数据看板", "内部 CRM"];
 
   const PROJECT_STEP = 1024;
   const projects: Record<string, string> = {};
   for (let i = 0; i < projectDefs.length; i++) {
-    const p = projectDefs[i];
-    const existing = await prisma.project.findFirst({ where: { name: p.name } });
+    const name = projectDefs[i];
+    const existing = await prisma.project.findFirst({ where: { name } });
     const project =
       existing ??
       (await prisma.project.create({
         data: {
-          name: p.name,
-          color: p.color,
+          name,
           sortIndex: (i + 1) * PROJECT_STEP,
           categoryId: "default-category",
         },
       }));
-    projects[p.name] = project.id;
+    projects[name] = project.id;
   }
 
   const taskCount = await prisma.task.count();

@@ -3,12 +3,11 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { errorJson, handleError, okJson } from "@/lib/api";
 import { appendSortIndex } from "@/lib/sort-index";
-import { PROJECT_COLORS, type ProjectColor, type ProjectDTO } from "@/lib/types";
+import type { ProjectDTO } from "@/lib/types";
 
 const UpdateInput = z
   .object({
     name: z.string().min(1).max(100).optional(),
-    color: z.enum(PROJECT_COLORS as [ProjectColor, ...ProjectColor[]]).optional(),
     archived: z.boolean().optional(),
     /** 把项目移动到指定分类 */
     categoryId: z.string().min(1).optional(),
@@ -16,7 +15,6 @@ const UpdateInput = z
   .refine(
     (v) =>
       v.name !== undefined ||
-      v.color !== undefined ||
       v.archived !== undefined ||
       v.categoryId !== undefined,
     { message: "EMPTY_UPDATE" },
@@ -36,7 +34,7 @@ export async function PATCH(
     });
     if (!current) return errorJson("NOT_FOUND", 404);
 
-    // 默认项目（如「收集箱」）禁止归档；改名 / 改色仍允许。
+    // 默认项目（如「收集箱」）禁止归档；改名 / 改分类仍允许。
     if (current.isDefault && data.archived === true) {
       return errorJson("DEFAULT_PROJECT_NOT_ARCHIVABLE", 400);
     }
@@ -68,7 +66,6 @@ export async function PATCH(
     return okJson<ProjectDTO>({
       id: project.id,
       name: project.name,
-      color: project.color as ProjectColor,
       archived: project.archived,
       isDefault: project.isDefault,
       categoryId: project.categoryId,

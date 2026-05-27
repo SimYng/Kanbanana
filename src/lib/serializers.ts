@@ -1,10 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type {
-  ProjectColor,
-  TaskDTO,
-  TaskPriority,
-  TaskStatus,
-} from "./types";
+import type { TaskDTO, TaskPriority, TaskStatus } from "./types";
 
 const taskInclude = {
   project: true,
@@ -41,7 +36,6 @@ export function serializeTask(task: TaskWithRelations): TaskDTO {
     project: {
       id: task.project.id,
       name: task.project.name,
-      color: task.project.color as ProjectColor,
       archived: task.project.archived,
       isDefault: task.project.isDefault,
       categoryId: task.project.categoryId,

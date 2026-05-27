@@ -3,30 +3,21 @@ import { prisma } from "@/lib/db";
 import { requireUser, requireAdmin } from "@/lib/session";
 import { handleError, okJson } from "@/lib/api";
 import { appendSortIndex } from "@/lib/sort-index";
-import {
-  PROJECT_COLORS,
-  type ProjectCategoryDTO,
-  type ProjectColor,
-} from "@/lib/types";
+import type { ProjectCategoryDTO } from "@/lib/types";
 
 const CreateInput = z.object({
   name: z.string().min(1).max(60),
-  color: z
-    .enum(PROJECT_COLORS as [ProjectColor, ...ProjectColor[]])
-    .default("gray"),
 });
 
 function toDTO(c: {
   id: string;
   name: string;
-  color: string;
   isDefault: boolean;
   sortIndex: number;
 }): ProjectCategoryDTO {
   return {
     id: c.id,
     name: c.name,
-    color: c.color as ProjectColor,
     isDefault: c.isDefault,
     sortIndex: c.sortIndex,
   };

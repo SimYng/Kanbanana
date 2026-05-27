@@ -6,10 +6,7 @@ import { NewCategoryDialog } from "@/components/new-category-dialog";
 import { ProjectGrid, type ProjectGridItem } from "@/components/project-grid";
 import { CategorySection } from "@/components/category-section";
 import { getCurrentUser } from "@/lib/session";
-import type {
-  ProjectCategoryDTO,
-  ProjectColor,
-} from "@/lib/types";
+import type { ProjectCategoryDTO } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +29,6 @@ export default async function ProjectsListPage() {
   const categories: ProjectCategoryDTO[] = categoriesRaw.map((c) => ({
     id: c.id,
     name: c.name,
-    color: c.color as ProjectColor,
     isDefault: c.isDefault,
     sortIndex: c.sortIndex,
   }));
@@ -48,7 +44,6 @@ export default async function ProjectsListPage() {
         project: {
           id: p.id,
           name: p.name,
-          color: p.color as ProjectColor,
           archived: p.archived,
           isDefault: p.isDefault,
           categoryId: p.categoryId,

@@ -2,22 +2,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { errorJson, handleError, okJson } from "@/lib/api";
-import {
-  PROJECT_COLORS,
-  type ProjectCategoryDTO,
-  type ProjectColor,
-} from "@/lib/types";
+import type { ProjectCategoryDTO } from "@/lib/types";
 
-const UpdateInput = z
-  .object({
-    name: z.string().min(1).max(60).optional(),
-    color: z
-      .enum(PROJECT_COLORS as [ProjectColor, ...ProjectColor[]])
-      .optional(),
-  })
-  .refine((v) => v.name !== undefined || v.color !== undefined, {
-    message: "EMPTY_UPDATE",
-  });
+const UpdateInput = z.object({
+  name: z.string().min(1).max(60),
+});
 
 export async function PATCH(
   req: Request,
@@ -40,7 +29,6 @@ export async function PATCH(
     return okJson<ProjectCategoryDTO>({
       id: cat.id,
       name: cat.name,
-      color: cat.color as ProjectColor,
       isDefault: cat.isDefault,
       sortIndex: cat.sortIndex,
     });

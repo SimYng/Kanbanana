@@ -211,7 +211,8 @@ src/lib/
 
 ## 8. UI 风格约定
 
-- 主题用 `next-themes`，组件用 CSS variable（`bg-background` / `text-foreground` / `border-input` 等），**不要硬编码 hex 颜色**（项目色 `PROJECT_COLOR_HEX` 例外，作为业务数据维度）
+- 主题用 `next-themes`，组件用 CSS variable（`bg-background` / `text-foreground` / `border-input` 等），**不要硬编码 hex 颜色**
+- **项目 / 项目分类没有"颜色"维度**：早期 schema 里 `Project.color` / `ProjectCategory.color` 已在 `drop_project_color` migration 中删除；UI 上靠"名称 + 文字层级 + 分类分组"识别，不要再引入项目色点 / 按项目调色板。需要状态强调时用 `STATUS_THEME`（看板列）或语义色 token（`text-info` / `text-warn` / `text-success` / `text-destructive`）
 - 按钮主操作 `variant="default"`，次操作 `variant="outline"`，破坏性 `variant="destructive"`，**避免 `ghost` 混用**导致风格不一
 - 状态标识用左侧 `1px` 色条（参考 `task-card.tsx`），优先级用 `PriorityBadge` 短形态
 - 中文文案用全角标点，但**操作按钮文案尽量短**（2–4 字优先）

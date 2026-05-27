@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
-import type { MemberDTO, ProjectDTO, ProjectColor } from "@/lib/types";
+import type { MemberDTO, ProjectDTO } from "@/lib/types";
 import { MemberWorkbench } from "../[id]/workbench";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,6 @@ export default async function UnassignedPage() {
   const projectDtos: ProjectDTO[] = projects.map((p) => ({
     id: p.id,
     name: p.name,
-    color: p.color as ProjectColor,
     archived: p.archived,
     isDefault: p.isDefault,
     categoryId: p.categoryId,
