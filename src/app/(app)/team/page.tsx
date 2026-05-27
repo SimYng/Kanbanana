@@ -36,7 +36,7 @@ export default async function TeamPage() {
   const memberRows = members.map((m) => {
     const mine = tasks.filter((t) => t.assigneeId === m.id);
     const open = mine.filter((t) => t.status !== "done");
-    const doneToday = mine.filter((t) => t.status === "done" && isToday(t.updatedAt)).length;
+    const doneToday = mine.filter((t) => t.status === "done" && isToday(t.completedAt)).length;
     return {
       member: m,
       doingCount: open.filter((t) => t.status === "doing").length,

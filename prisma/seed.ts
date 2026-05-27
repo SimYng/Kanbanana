@@ -123,6 +123,7 @@ async function main() {
         sortIndex: assigneeCursor[assigneeId],
         focusedToday: t.focusedToday ?? false,
         blockedReason: t.blockedReason,
+        completedAt: t.status === "done" ? new Date() : null,
       },
     });
 

@@ -60,6 +60,8 @@ export interface TaskDTO {
   focusedToday: boolean;
   blockedReason: string | null;
   dueDate: string | null;
+  /** 状态变为 done 时由 API 自动写入；切回非 done 时清空。 */
+  completedAt: string | null;
   yuqueLinks: { id: string; url: string; title: string | null }[];
   project: { id: string; name: string; color: ProjectColor; archived: boolean };
   assignee: { id: string; name: string } | null;

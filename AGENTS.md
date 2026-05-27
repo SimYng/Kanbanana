@@ -116,6 +116,12 @@ src/lib/
 ### 阻塞必须带原因
 点击「阻塞」按钮**不直接**改 status，先弹 `BlockReasonDialog` 收集 `blockedReason`，提交时一并 PATCH。切到非 blocked 状态时**主动清空 blockedReason**，避免残留旧文案。参见 `workbench.tsx` 的 `handleAction`。
 
+### `completedAt` 由后端独占维护
+`Task.completedAt` 用来精确判断「今日完成」、「本周完成」等统计，**不要**用 `updatedAt` 替代（updatedAt 被任意字段编辑触发，会污染统计）。
+- API（`/api/tasks/[id]` PATCH）根据 status 切换**自动**维护：非 done → done 写入 `new Date()`，done → 非 done 清空
+- 前端 **不可** 在 PATCH body 里显式传 `completedAt`，Zod schema 也不接收该字段
+- 统计代码统一用 `isToday(t.completedAt)` 风格，参见 `team/page.tsx`、`workbench.tsx` 的 `doneToday`
+
 ### 截止时间是「日期」不是「时刻」
 `Task.dueDate` 在模型里是 `DateTime?`，但产品语义是"截止到哪一天"。统一通过 `src/lib/utils.ts` 的三个 helper 处理，**不要散写 `new Date()` 拼日期**：
 - `localDateToIso(yyyy-MM-dd)` → 提交时把表单值转 ISO（存为本地当天 23:59:59）

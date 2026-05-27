@@ -63,6 +63,9 @@ model Task {
   focusedToday   Boolean  @default(false)
   blockedReason  String?
   dueDate        DateTime?
+  // 任务被切换为 done 状态时由 API 写入；切回非 done 时清空。
+  // 不要依赖 updatedAt 判断"今日完成"——updatedAt 会被任何字段编辑触发。
+  completedAt    DateTime?
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

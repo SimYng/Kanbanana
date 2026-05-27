@@ -45,6 +45,14 @@ interface TaskDialogProps {
   onDeleted?: (taskId: string) => void;
 }
 
+/** "2026-05-27 14:32"，本地时区，不带秒，方便对账 */
+function formatCompletedAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function TaskDialog({
   task,
   open,
@@ -219,6 +227,14 @@ export function TaskDialog({
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+            {task.completedAt && (
+              <div className="grid gap-2">
+                <Label>完成时间</Label>
+                <div className="flex h-9 items-center rounded-md border border-input bg-muted/30 px-3 text-sm text-muted-foreground tabular-nums">
+                  {formatCompletedAt(task.completedAt)}
+                </div>
+              </div>
+            )}
           </div>
 
           {status === "blocked" && (

@@ -32,6 +32,7 @@ export function serializeTask(task: TaskWithRelations): TaskDTO {
     focusedToday: task.focusedToday,
     blockedReason: task.blockedReason,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    completedAt: task.completedAt ? task.completedAt.toISOString() : null,
     yuqueLinks: task.yuqueLinks.map((l) => ({
       id: l.id,
       url: l.url,

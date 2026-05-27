@@ -54,7 +54,7 @@ export function MemberWorkbench({
       todo: visible.filter((t) => t.status === "todo"),
       blocked: visible.filter((t) => t.status === "blocked"),
       done: doneAll,
-      doneToday: doneAll.filter((t) => isToday(t.updatedAt)),
+      doneToday: doneAll.filter((t) => isToday(t.completedAt)),
     };
   }, [tasks]);
 
