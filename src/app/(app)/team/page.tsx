@@ -16,7 +16,11 @@ import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
 import { cn, formatDueLabel, isTaskVisible, isToday } from "@/lib/utils";
-import { PROJECT_COLOR_HEX, type ProjectColor, type TaskDTO } from "@/lib/types";
+import type { ProjectColor, TaskDTO } from "@/lib/types";
+import {
+  ProjectProgressGrid,
+  type ProjectProgressItem,
+} from "./project-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +84,24 @@ export default async function TeamPage() {
 
   const todayGroups = groupByDay(todayPool, todayStart, tomorrowStart);
   const weekGroups = groupByDay(weekPool, todayStart, tomorrowStart);
+
+  // 项目进度数据：保持 server 端 sortIndex 顺序作为"手动排序"默认值
+  const projectProgressItems: ProjectProgressItem[] = projects.map((p) => {
+    const pt = tasks.filter((t) => t.projectId === p.id);
+    const doneCount = pt.filter((t) => t.status === "done").length;
+    const blockedCount = pt.filter((t) => t.status === "blocked").length;
+    const totalCount = pt.length;
+    const pct = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
+    return {
+      id: p.id,
+      name: p.name,
+      color: p.color as ProjectColor,
+      doneCount,
+      blockedCount,
+      totalCount,
+      pct,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -215,54 +237,7 @@ export default async function TeamPage() {
         </section>
       )}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">项目进度</h2>
-        <div className="grid gap-3 md:grid-cols-2">
-          {projects.map((p) => {
-            const pt = tasks.filter((t) => t.projectId === p.id);
-            const doneCount = pt.filter((t) => t.status === "done").length;
-            const blockedCount = pt.filter((t) => t.status === "blocked").length;
-            const pct = pt.length === 0 ? 0 : Math.round((doneCount / pt.length) * 100);
-            return (
-              <Card key={p.id}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center justify-between text-base">
-                    <Link href={`/project/${p.id}`} className="flex items-center gap-2 hover:underline">
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ background: PROJECT_COLOR_HEX[p.color as ProjectColor] }}
-                      />
-                      {p.name}
-                    </Link>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {doneCount}/{pt.length}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 pt-0">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full transition-all"
-                      style={{
-                        width: `${pct}%`,
-                        background: PROJECT_COLOR_HEX[p.color as ProjectColor],
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>完成度 {pct}%</span>
-                    {blockedCount > 0 && (
-                      <Badge variant="warn" className="font-normal">
-                        阻塞 ×{blockedCount}
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
+      <ProjectProgressGrid items={projectProgressItems} />
     </div>
   );
 }
