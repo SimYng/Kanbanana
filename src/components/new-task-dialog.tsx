@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { NewProjectDialog } from "@/components/new-project-dialog";
+import { NewMemberDialog } from "@/components/new-member-dialog";
 import { apiFetch } from "@/lib/fetcher";
 import { localDateToIso } from "@/lib/utils";
 import {
@@ -43,6 +45,9 @@ interface NewTaskDialogProps {
   /** 自定义触发器元素：必须是单个可作为 Radix DialogTrigger asChild 子节点的 ReactElement。
    *  传入则替换默认的 + 文案按钮，便于在列头放小 icon 按钮等场景。 */
   triggerNode?: ReactElement;
+  /** 是否在「项目 / 负责人」下拉旁展示「新建」+ 按钮（仅 admin 应启用）。
+   *  默认 false：避免无权限用户看到点不动的按钮。 */
+  allowCreateRelated?: boolean;
 }
 
 export function NewTaskDialog({
@@ -53,6 +58,7 @@ export function NewTaskDialog({
   onCreated,
   triggerLabel = "新建任务",
   triggerNode,
+  allowCreateRelated,
 }: NewTaskDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -64,9 +70,25 @@ export function NewTaskDialog({
   const [yuqueLink, setYuqueLink] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // 本地副本：内嵌「新建项目 / 新建成员」时把新实体先 append 进来，
+  // 不依赖父级 router.refresh 的时序，下拉立刻能选到新值。
+  const [localProjects, setLocalProjects] = useState<ProjectDTO[]>(projects);
+  const [localMembers, setLocalMembers] = useState<MemberDTO[]>(members);
+
+  // 父级 props 变化（如 router.refresh 后）同步本地副本
   useEffect(() => {
-    if (open) {
-      setProjectId(defaultProjectId ?? projects[0]?.id ?? "");
+    setLocalProjects(projects);
+  }, [projects]);
+  useEffect(() => {
+    setLocalMembers(members);
+  }, [members]);
+
+  // 只在「打开瞬间」reset 字段；props.projects 因父级 refresh 变化时不再触发，
+  // 避免覆盖用户刚通过 + 按钮新建并选中的项目 / 负责人。
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    if (open && !prevOpenRef.current) {
+      setProjectId(defaultProjectId ?? localProjects[0]?.id ?? "");
       setAssigneeId(defaultAssigneeId ?? "");
       setTitle("");
       setDescription("");
@@ -74,7 +96,22 @@ export function NewTaskDialog({
       setDueDate("");
       setYuqueLink("");
     }
-  }, [open, defaultProjectId, defaultAssigneeId, projects]);
+    prevOpenRef.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 故意只依赖 open，避免列表变化覆盖选中
+  }, [open]);
+
+  function handleProjectCreated(p: ProjectDTO) {
+    setLocalProjects((prev) =>
+      prev.some((x) => x.id === p.id) ? prev : [...prev, p],
+    );
+    setProjectId(p.id);
+  }
+  function handleMemberCreated(m: MemberDTO) {
+    setLocalMembers((prev) =>
+      prev.some((x) => x.id === m.id) ? prev : [...prev, m],
+    );
+    setAssigneeId(m.id);
+  }
 
   async function handleSubmit() {
     if (!title.trim() || !projectId) return;
@@ -138,39 +175,80 @@ export function NewTaskDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>项目</Label>
-              <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择项目" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Select + 「新建项目」按钮同行；新建后自动 append + select */}
+              <div className="flex items-center gap-1.5">
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="选择项目" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {localProjects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {allowCreateRelated && (
+                  <NewProjectDialog
+                    onCreated={handleProjectCreated}
+                    triggerNode={
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        aria-label="新建项目"
+                        title="新建项目"
+                        className="h-9 w-9 shrink-0 p-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
             </div>
             <div className="grid gap-2">
               <Label>负责人</Label>
-              <Select
-                value={assigneeId || "_unassigned"}
-                onValueChange={(v) => setAssigneeId(v === "_unassigned" ? "" : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_unassigned">未分配</SelectItem>
-                  {members
-                    .filter((m) => m.role !== "admin")
-                    .map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1.5">
+                <Select
+                  value={assigneeId || "_unassigned"}
+                  onValueChange={(v) =>
+                    setAssigneeId(v === "_unassigned" ? "" : v)
+                  }
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_unassigned">未分配</SelectItem>
+                    {localMembers
+                      .filter((m) => m.role !== "admin")
+                      .map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {allowCreateRelated && (
+                  <NewMemberDialog
+                    onCreated={handleMemberCreated}
+                    triggerNode={
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        aria-label="新增成员"
+                        title="新增成员"
+                        className="h-9 w-9 shrink-0 p-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
             </div>
           </div>
 

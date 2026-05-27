@@ -228,6 +228,7 @@ export function ProjectBoard({
                 patchLocal(created);
                 router.refresh();
               }}
+              allowCreateRelated
             />
           </div>
         </div>

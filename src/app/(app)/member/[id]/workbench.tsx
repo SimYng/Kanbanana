@@ -171,6 +171,7 @@ export function MemberWorkbench({
                 router.refresh();
               }}
               triggerLabel="新建任务"
+              allowCreateRelated
             />
           </div>
         </div>

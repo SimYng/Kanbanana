@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -24,7 +24,19 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function NewProjectDialog({ variant = "default" }: { variant?: "default" | "outline" }) {
+interface NewProjectDialogProps {
+  variant?: "default" | "outline";
+  /** 创建成功后回调（在 close 之前调用）。常用于让父级 select 直接选中新项目。 */
+  onCreated?: (project: ProjectDTO) => void;
+  /** 替换默认的 + 文案触发器；需是单个可作为 Radix DialogTrigger asChild 子节点的 ReactElement */
+  triggerNode?: ReactElement;
+}
+
+export function NewProjectDialog({
+  variant = "default",
+  onCreated,
+  triggerNode,
+}: NewProjectDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -41,10 +53,11 @@ export function NewProjectDialog({ variant = "default" }: { variant?: "default" 
     if (!name.trim()) return;
     setBusy(true);
     try {
-      await apiFetch<ProjectDTO>("/api/projects", {
+      const created = await apiFetch<ProjectDTO>("/api/projects", {
         method: "POST",
         body: JSON.stringify({ name: name.trim(), color }),
       });
+      onCreated?.(created);
       toast.success("项目已创建");
       reset();
       setOpen(false);
@@ -70,10 +83,12 @@ export function NewProjectDialog({ variant = "default" }: { variant?: "default" 
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant={variant}>
-          <Plus className="h-4 w-4" />
-          新建项目
-        </Button>
+        {triggerNode ?? (
+          <Button size="sm" variant={variant}>
+            <Plus className="h-4 w-4" />
+            新建项目
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

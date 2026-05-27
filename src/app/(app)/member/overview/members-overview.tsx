@@ -172,6 +172,7 @@ export function MembersOverview({
               projects={projects.filter((p) => !p.archived)}
               members={members}
               onCreated={handleTaskCreated}
+              allowCreateRelated
             />
           </div>
         </div>
@@ -348,6 +349,7 @@ function OverviewColumn({
             members={members}
             defaultAssigneeId={defaultAssigneeId}
             onCreated={onTaskCreated}
+            allowCreateRelated
             triggerNode={
               <Button
                 size="sm"

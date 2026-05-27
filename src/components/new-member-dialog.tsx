@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -35,7 +35,14 @@ function randomPassword(len = 10) {
   return out;
 }
 
-export function NewMemberDialog() {
+interface NewMemberDialogProps {
+  /** 创建成功后回调（在 close 之前调用）。常用于让父级 select 直接选中新成员。 */
+  onCreated?: (member: MemberDTO) => void;
+  /** 替换默认的 + 文案触发器；需是单个可作为 Radix DialogTrigger asChild 子节点的 ReactElement */
+  triggerNode?: ReactElement;
+}
+
+export function NewMemberDialog({ onCreated, triggerNode }: NewMemberDialogProps = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -67,6 +74,7 @@ export function NewMemberDialog() {
           role,
         }),
       });
+      onCreated?.(created);
       toast.success(`已创建：${created.name}（${created.email}）`);
       reset();
       setOpen(false);
@@ -92,10 +100,12 @@ export function NewMemberDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4" />
-          新增成员
-        </Button>
+        {triggerNode ?? (
+          <Button size="sm">
+            <Plus className="h-4 w-4" />
+            新增成员
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
