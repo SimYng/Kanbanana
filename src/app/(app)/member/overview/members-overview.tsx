@@ -4,16 +4,19 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberAvatar } from "@/components/member-avatar";
 import { BoardTaskCard } from "@/components/board-task-card";
+import { SortableTaskList } from "@/components/sortable-task-list";
 import { TaskDialog } from "@/components/task-dialog";
 import {
   MemberSwitcher,
   OVERVIEW_NAV_ID,
 } from "@/components/member-switcher";
+import { apiFetch } from "@/lib/fetcher";
 import { cn, isTaskVisible } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
 import {
@@ -92,6 +95,48 @@ export function MembersOverview({
     setDialogOpen(true);
   }
 
+  function patchLocal(updated: TaskDTO) {
+    setTasks((prev) => {
+      const exists = prev.some((t) => t.id === updated.id);
+      return exists
+        ? prev.map((t) => (t.id === updated.id ? updated : t))
+        : [...prev, updated];
+    });
+  }
+
+  async function refreshAll() {
+    const next = await apiFetch<TaskDTO[]>("/api/tasks");
+    setTasks(next.filter((t) => t.assigneeId != null));
+  }
+
+  /**
+   * 列内排序。每个成员的每种状态独立 DndContext，dnd-kit 天然只允许同 context 内拖动，
+   * 所以跨成员或跨状态的拖动直接被忽略（鼠标释放无副作用），不需要额外校验。
+   */
+  async function handleReorder(
+    draggedId: string,
+    targetId: string,
+    position: "before" | "after",
+  ) {
+    try {
+      const res = await apiFetch<{ task: TaskDTO; rebalanced: boolean }>(
+        "/api/tasks/reorder",
+        {
+          method: "POST",
+          body: JSON.stringify({ draggedId, targetId, position }),
+        },
+      );
+      if (res.rebalanced) {
+        await refreshAll();
+      } else {
+        patchLocal(res.task);
+      }
+      router.refresh();
+    } catch (e) {
+      toast.error(`排序失败：${(e as Error).message}`);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="space-y-2">
@@ -130,6 +175,7 @@ export function MembersOverview({
               member={m}
               tasks={grouped.get(m.id) ?? []}
               onOpen={openTaskDialog}
+              onReorder={handleReorder}
             />
           ))
         )}
@@ -159,15 +205,36 @@ export function MembersOverview({
   );
 }
 
+// 列内任务渲染顺序，跟 STATUS_ORDER 一致；每段独立 DndContext，跨段不允许拖动
+const RENDER_STATUSES: TaskStatus[] = ["doing", "blocked", "todo", "done"];
+
 function MemberColumn({
   member,
   tasks,
   onOpen,
+  onReorder,
 }: {
   member: MemberDTO;
   tasks: TaskDTO[];
   onOpen: (task: TaskDTO) => void;
+  onReorder: (
+    draggedId: string,
+    targetId: string,
+    position: "before" | "after",
+  ) => void;
 }) {
+  const groups = useMemo(() => {
+    const buckets: Record<TaskStatus, TaskDTO[]> = {
+      doing: [],
+      blocked: [],
+      todo: [],
+      done: [],
+    };
+    for (const t of tasks) buckets[t.status].push(t);
+    // 入参 tasks 已按 STATUS_ORDER + sortIndex 排好，按 status 切片后组内顺序自然正确
+    return buckets;
+  }, [tasks]);
+
   const stats = useMemo(() => {
     const s = { doing: 0, blocked: 0, todo: 0, done: 0 };
     for (const t of tasks) s[t.status] += 1;
@@ -205,16 +272,30 @@ function MemberColumn({
             手头是空的
           </div>
         ) : (
-          tasks.map((t) => (
-            <BoardTaskCard
-              key={t.id}
-              task={t}
-              hideAssignee
-              showProject
-              showStatusBar
-              onOpen={onOpen}
-            />
-          ))
+          RENDER_STATUSES.map((status) => {
+            const items = groups[status];
+            if (items.length === 0) return null;
+            return (
+              <SortableTaskList
+                key={status}
+                tasks={items}
+                onReorder={onReorder}
+              >
+                <div className="space-y-2">
+                  {items.map((t) => (
+                    <BoardTaskCard
+                      key={t.id}
+                      task={t}
+                      hideAssignee
+                      showProject
+                      showStatusBar
+                      onOpen={onOpen}
+                    />
+                  ))}
+                </div>
+              </SortableTaskList>
+            );
+          })
         )}
       </CardContent>
     </Card>
