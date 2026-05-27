@@ -89,7 +89,14 @@ export function NewTaskDialog({
       toast.success("已创建");
       setOpen(false);
     } catch (e) {
-      toast.error(`创建失败：${(e as Error).message}`);
+      const msg = (e as Error).message;
+      if (msg === "UNAUTHORIZED")
+        toast.error("会话已失效，请重新登录");
+      else if (msg === "RELATED_NOT_FOUND")
+        toast.error("关联的项目或负责人不存在，请刷新后重试");
+      else if (msg === "INVALID_INPUT")
+        toast.error("输入有误，请检查必填项");
+      else toast.error(`创建失败：${msg}`);
     } finally {
       setBusy(false);
     }

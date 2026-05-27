@@ -19,6 +19,8 @@ export function handleError(err: unknown) {
   }
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2025") return errorJson("NOT_FOUND", 404);
+    if (err.code === "P2002") return errorJson("UNIQUE_CONSTRAINT", 409);
+    if (err.code === "P2003") return errorJson("RELATED_NOT_FOUND", 409);
     return errorJson(`DB_ERROR_${err.code}`, 400);
   }
   const status = (err as { status?: number })?.status;
