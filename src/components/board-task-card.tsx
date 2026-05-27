@@ -152,9 +152,14 @@ export function BoardTaskCard({
             )}
             {hasYuque && <span className="shrink-0">文档 ×{task.yuqueLinks.length}</span>}
             {hasBlockedReason && (
-              <span className="inline-flex min-w-0 items-center gap-1 truncate text-warn">
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                <span className="truncate">{task.blockedReason}</span>
+              // 默认只显示警告 icon，原生 title 提供 hover tooltip，
+              // 避免长原因把元信息行撑爆 / 截断成「等待申请微信开放平…」
+              <span
+                className="inline-flex shrink-0 items-center text-warn"
+                title={task.blockedReason ?? undefined}
+                aria-label={`阻塞原因：${task.blockedReason}`}
+              >
+                <AlertTriangle className="h-3 w-3" />
               </span>
             )}
             {onAction && (
