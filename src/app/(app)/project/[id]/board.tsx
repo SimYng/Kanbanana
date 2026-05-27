@@ -16,6 +16,7 @@ import { BlockReasonDialog } from "@/components/block-reason-dialog";
 import { ProjectActionsMenu } from "@/components/project-actions-menu";
 import { apiFetch } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
+import { STATUS_THEME } from "@/lib/status-theme";
 import {
   PROJECT_COLOR_HEX,
   STATUS_LABEL,
@@ -25,39 +26,6 @@ import {
   type TaskDTO,
   type TaskStatus,
 } from "@/lib/types";
-
-/**
- * 看板列的状态视觉主题：
- *  - top: 列顶部细色条，状态最直观的锚点
- *  - dot: 列头标题前的小圆点
- *  - title: 标题文字颜色
- *  与 `task-card.tsx` 的 statusBarClass 保持一致，避免风格漂移。
- */
-const STATUS_THEME: Record<
-  TaskStatus,
-  { top: string; dot: string; title: string }
-> = {
-  todo: {
-    top: "border-t-muted-foreground/30",
-    dot: "bg-muted-foreground/50",
-    title: "text-foreground",
-  },
-  doing: {
-    top: "border-t-info",
-    dot: "bg-info",
-    title: "text-info",
-  },
-  blocked: {
-    top: "border-t-warn",
-    dot: "bg-warn",
-    title: "text-warn",
-  },
-  done: {
-    top: "border-t-success",
-    dot: "bg-success",
-    title: "text-success",
-  },
-};
 
 type ProjectStat = { todo: number; doing: number; blocked: number };
 

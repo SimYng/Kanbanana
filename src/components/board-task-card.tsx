@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PriorityBadge } from "@/components/priority-badge";
+import { ProjectPill } from "@/components/project-pill";
 import { cn, formatDueLabel } from "@/lib/utils";
 import type { TaskDTO, TaskStatus } from "@/lib/types";
 
@@ -23,6 +24,20 @@ const DUE_TONE_CLASS = {
   muted: "text-muted-foreground",
 } as const;
 
+/**
+ * 卡片左侧的"任务状态色条"。
+ *
+ * 在没有"列本身就有颜色"语义的场景（例如成员工作台 Kanban、成员总览），
+ * 通过这条 2-3px 的左色条把任务状态色作为视觉主角，
+ * 避免与项目色点抢戏（这种场景下项目色点也会通过 hideDot 隐藏）。
+ */
+const STATUS_BORDER: Record<TaskStatus, string> = {
+  todo: "border-l-muted-foreground/40",
+  doing: "border-l-info",
+  blocked: "border-l-warn",
+  done: "border-l-success/60",
+};
+
 type Action = { kind: "status"; value: TaskStatus };
 
 interface BoardTaskCardProps {
@@ -30,6 +45,12 @@ interface BoardTaskCardProps {
   onOpen?: (task: TaskDTO) => void;
   /** 传入则在卡片 hover 时露出紧凑的状态切换按钮组 */
   onAction?: (taskId: string, action: Action) => void;
+  /** 工作台等"已知负责人"场景，省掉负责人名以减少冗余 */
+  hideAssignee?: boolean;
+  /** 工作台等"跨项目"场景，显示项目（默认放到第二行 meta，隐藏项目色点） */
+  showProject?: boolean;
+  /** 卡片左侧加状态色条。配合 showProject 用于"列本身没有状态颜色"的场景 */
+  showStatusBar?: boolean;
 }
 
 /**
@@ -37,10 +58,20 @@ interface BoardTaskCardProps {
  *
  * 布局心智：
  *  - 第一行：drag · P2 · 负责人 · 标题（占满剩余）· 截止时间
- *  - 第二行（仅在有文档/阻塞/可操作时渲染）：辅助元信息 + hover 状态切换按钮
+ *  - 第二行（meta）：项目（如 showProject）· 文档 · 阻塞原因 · hover 状态切换按钮
  *  - 所有元素 `items-center` 垂直居中对齐，避免 badge 与文本高度不一致
+ *
+ * 项目色 vs 状态色：showStatusBar 模式下左边色条 = 任务状态色，
+ * 项目仅以纯文字呈现（hideDot），避免与状态色互相干扰。
  */
-export function BoardTaskCard({ task, onOpen, onAction }: BoardTaskCardProps) {
+export function BoardTaskCard({
+  task,
+  onOpen,
+  onAction,
+  hideAssignee,
+  showProject,
+  showStatusBar,
+}: BoardTaskCardProps) {
   const {
     attributes,
     listeners,
@@ -58,14 +89,18 @@ export function BoardTaskCard({ task, onOpen, onAction }: BoardTaskCardProps) {
   const due = task.status === "done" ? null : formatDueLabel(task.dueDate);
   const hasYuque = task.yuqueLinks.length > 0;
   const hasBlockedReason = task.status === "blocked" && !!task.blockedReason;
-  const hasMetaRow = hasYuque || hasBlockedReason || !!onAction;
+  const hasMetaRow =
+    !!showProject || hasYuque || hasBlockedReason || !!onAction;
 
   return (
     <Card
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group cursor-pointer transition-all hover:border-foreground/20",
+        // hover 效果用 shadow + 轻微抬起，避免 `hover:border-*` 覆盖
+        // 左侧 border-l 的状态色条（会让卡片在 hover 时被误以为变成"待办"灰）
+        "group cursor-pointer transition-all hover:-translate-y-px hover:shadow-md hover:ring-1 hover:ring-foreground/10",
+        showStatusBar && cn("border-l-[3px]", STATUS_BORDER[task.status]),
         isDragging && "opacity-40 ring-2 ring-primary",
       )}
       onClick={() => onOpen?.(task)}
@@ -83,7 +118,7 @@ export function BoardTaskCard({ task, onOpen, onAction }: BoardTaskCardProps) {
             <GripVertical className="h-3.5 w-3.5" />
           </button>
           <PriorityBadge priority={task.priority} short />
-          {task.assignee && (
+          {!hideAssignee && task.assignee && (
             <span className="shrink-0 text-[11px] text-muted-foreground">
               {task.assignee.name}
             </span>
@@ -106,11 +141,21 @@ export function BoardTaskCard({ task, onOpen, onAction }: BoardTaskCardProps) {
 
         {hasMetaRow && (
           <div className="flex items-center gap-2 pl-6 text-[11px] text-muted-foreground">
-            {hasYuque && <span>文档 ×{task.yuqueLinks.length}</span>}
+            {showProject && (
+              <span className="min-w-0 truncate">
+                <ProjectPill
+                  name={task.project.name}
+                  color={task.project.color}
+                  size="xs"
+                  hideDot
+                />
+              </span>
+            )}
+            {hasYuque && <span className="shrink-0">文档 ×{task.yuqueLinks.length}</span>}
             {hasBlockedReason && (
-              <span className="inline-flex items-center gap-1 text-warn">
-                <AlertTriangle className="h-3 w-3" />
-                {task.blockedReason}
+              <span className="inline-flex min-w-0 items-center gap-1 truncate text-warn">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                <span className="truncate">{task.blockedReason}</span>
               </span>
             )}
             {onAction && (

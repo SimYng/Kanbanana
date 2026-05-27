@@ -4,10 +4,13 @@ export function ProjectPill({
   name,
   color,
   size = "sm",
+  hideDot,
 }: {
   name: string;
   color: ProjectColor;
   size?: "sm" | "xs";
+  /** 在卡片上已经用左侧色条表达"任务状态色"时，隐藏项目色点避免与状态色视觉冲突 */
+  hideDot?: boolean;
 }) {
   return (
     <span
@@ -15,10 +18,12 @@ export function ProjectPill({
         size === "xs" ? "text-[11px]" : "text-xs"
       } text-muted-foreground`}
     >
-      <span
-        className="inline-block h-2 w-2 rounded-full"
-        style={{ background: PROJECT_COLOR_HEX[color] }}
-      />
+      {!hideDot && (
+        <span
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ background: PROJECT_COLOR_HEX[color] }}
+        />
+      )}
       {name}
     </span>
   );
