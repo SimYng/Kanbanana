@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/fetcher";
+import { isoToLocalDate, localDateToIso } from "@/lib/utils";
 import {
   PRIORITY_LABEL,
   STATUS_LABEL,
@@ -60,6 +61,7 @@ export function TaskDialog({
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [projectId, setProjectId] = useState<string>("");
   const [blockedReason, setBlockedReason] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -71,6 +73,7 @@ export function TaskDialog({
     setAssigneeId(task.assigneeId ?? "");
     setProjectId(task.projectId);
     setBlockedReason(task.blockedReason ?? "");
+    setDueDate(isoToLocalDate(task.dueDate));
   }, [task]);
 
   if (!task) return null;
@@ -89,6 +92,7 @@ export function TaskDialog({
           assigneeId: assigneeId || null,
           projectId,
           blockedReason: status === "blocked" ? blockedReason : null,
+          dueDate: localDateToIso(dueDate),
         }),
       });
       onUpdated?.(updated);
@@ -202,6 +206,18 @@ export function TaskDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="task-due-date">截止日期</Label>
+              <Input
+                id="task-due-date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
             </div>
           </div>
 

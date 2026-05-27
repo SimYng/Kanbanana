@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PriorityBadge } from "@/components/priority-badge";
 import { ProjectPill } from "@/components/project-pill";
-import { cn } from "@/lib/utils";
+import { cn, formatDueLabel } from "@/lib/utils";
 import type { TaskDTO, TaskStatus } from "@/lib/types";
 
 type Action = { kind: "status"; value: TaskStatus };
@@ -28,10 +28,14 @@ interface TaskCardProps {
   hideAssignee?: boolean;
   /** 隐藏项目（项目看板里已知项目，避免冗余） */
   hideProject?: boolean;
-  /** 显示在右上角的截止时间标签 */
-  dueLabel?: string;
   className?: string;
 }
+
+const DUE_TONE_CLASS = {
+  danger: "text-destructive",
+  warn: "text-warn",
+  muted: "text-muted-foreground",
+} as const;
 
 function statusBarClass(status: TaskStatus) {
   switch (status) {
@@ -52,9 +56,10 @@ export function TaskCard({
   onOpen,
   hideAssignee,
   hideProject,
-  dueLabel,
   className,
 }: TaskCardProps) {
+  // 已完成任务不再强调截止时间（避免一片"逾期"红色噪音）
+  const due = task.status === "done" ? null : formatDueLabel(task.dueDate);
   const {
     attributes,
     listeners,
@@ -105,9 +110,14 @@ export function TaskCard({
           >
             {task.title}
           </button>
-          {dueLabel && (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {dueLabel}
+          {due && (
+            <span
+              className={cn(
+                "shrink-0 text-xs tabular-nums",
+                DUE_TONE_CLASS[due.tone],
+              )}
+            >
+              {due.label}
             </span>
           )}
           {onAction && (

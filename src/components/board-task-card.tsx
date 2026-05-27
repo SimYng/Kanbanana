@@ -2,11 +2,17 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { AlertTriangle, GripVertical } from "lucide-react";
+import { AlertTriangle, CalendarClock, GripVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PriorityBadge } from "@/components/priority-badge";
-import { cn } from "@/lib/utils";
+import { cn, formatDueLabel } from "@/lib/utils";
 import type { TaskDTO } from "@/lib/types";
+
+const DUE_TONE_CLASS = {
+  danger: "text-destructive",
+  warn: "text-warn",
+  muted: "text-muted-foreground",
+} as const;
 
 /**
  * 看板列里的小卡片：精简版任务卡，仅显示关键信息。
@@ -31,6 +37,8 @@ export function BoardTaskCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const due = task.status === "done" ? null : formatDueLabel(task.dueDate);
 
   return (
     <Card
@@ -62,6 +70,17 @@ export function BoardTaskCard({
         <div className="flex items-center gap-2 pl-6 text-[11px] text-muted-foreground">
           {task.assignee && <span>{task.assignee.name}</span>}
           {task.yuqueLinks.length > 0 && <span>· 文档 ×{task.yuqueLinks.length}</span>}
+          {due && (
+            <span
+              className={cn(
+                "ml-auto inline-flex items-center gap-0.5 tabular-nums",
+                DUE_TONE_CLASS[due.tone],
+              )}
+            >
+              <CalendarClock className="h-3 w-3" />
+              {due.label}
+            </span>
+          )}
         </div>
         {task.status === "blocked" && task.blockedReason && (
           <div className="flex items-center gap-1 pl-6 text-[11px] text-warn">

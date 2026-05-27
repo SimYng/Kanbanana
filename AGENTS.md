@@ -116,6 +116,13 @@ src/lib/
 ### 阻塞必须带原因
 点击「阻塞」按钮**不直接**改 status，先弹 `BlockReasonDialog` 收集 `blockedReason`，提交时一并 PATCH。切到非 blocked 状态时**主动清空 blockedReason**，避免残留旧文案。参见 `workbench.tsx` 的 `handleAction`。
 
+### 截止时间是「日期」不是「时刻」
+`Task.dueDate` 在模型里是 `DateTime?`，但产品语义是"截止到哪一天"。统一通过 `src/lib/utils.ts` 的三个 helper 处理，**不要散写 `new Date()` 拼日期**：
+- `localDateToIso(yyyy-MM-dd)` → 提交时把表单值转 ISO（存为本地当天 23:59:59）
+- `isoToLocalDate(iso)` → 编辑时把 ISO 转回 `<input type="date">` 的值
+- `formatDueLabel(iso)` → 卡片显示用，返回 `{ label, tone: "danger"|"warn"|"muted" }`，含「逾期 N 天 / 今天到期 / N 天后」等口径
+卡片侧已完成（`done`）任务**不渲染**截止时间，避免一片红色的视觉噪音。
+
 ### 权限分级
 - 通过 `requireAdmin()` / `requireUser()` 守卫 API（`src/lib/session.ts`）
 - 前端通过 server component 拉 `getCurrentUser()` 传 `isAdmin` prop 到 client component
