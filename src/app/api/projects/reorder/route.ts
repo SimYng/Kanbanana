@@ -7,12 +7,17 @@ import {
   needsRebalance,
   rebalance,
 } from "@/lib/sort-index";
-import type { ProjectDTO } from "@/lib/types";
+import { serializeProject } from "@/lib/serializers";
 
 /**
  * 项目拖拽排序 API（admin 专属）。
  *
- * 排序作用域固定为「未归档项目」。归档项目不参与排序，也不能作为拖拽目标。
+ * 两种 scope 互不相干：
+ *  - "default"（默认）：分类内的常规顺序（Project.sortIndex），仅未归档项目；
+ *    且要求 dragged / target 处于同一分类。
+ *  - "starred"：顶部「重点项目区」内的顺序（Project.starSortIndex），
+ *    跨分类，要求 dragged / target 均已加星（starSortIndex != null）。
+ *
  * 复用 lib/sort-index 的算法，与任务排序保持一致心智。
  */
 
@@ -20,12 +25,15 @@ const Input = z.object({
   draggedId: z.string().min(1),
   targetId: z.string().min(1),
   position: z.enum(["before", "after"]),
+  scope: z.enum(["default", "starred"]).default("default"),
 });
 
 export async function POST(req: Request) {
   try {
     await requireAdmin();
-    const { draggedId, targetId, position } = Input.parse(await req.json());
+    const { draggedId, targetId, position, scope } = Input.parse(
+      await req.json(),
+    );
 
     if (draggedId === targetId) return errorJson("SAME_ID", 400);
 
@@ -34,6 +42,54 @@ export async function POST(req: Request) {
       prisma.project.findUnique({ where: { id: targetId } }),
     ]);
     if (!dragged || !target) return errorJson("NOT_FOUND", 404);
+
+    // ── 重点项目区排序分支 ─────────────────────────────────────
+    if (scope === "starred") {
+      if (dragged.starSortIndex == null || target.starSortIndex == null) {
+        return errorJson("NOT_STARRED", 400);
+      }
+      const siblings = await prisma.project.findMany({
+        where: { starSortIndex: { not: null } },
+        select: { id: true, starSortIndex: true },
+        orderBy: { starSortIndex: "asc" },
+      });
+      const siblingsForSort = siblings.map((s) => ({
+        id: s.id,
+        sortIndex: s.starSortIndex!,
+      }));
+      const newIndex = computeSortIndex(
+        siblingsForSort,
+        draggedId,
+        targetId,
+        position,
+      );
+      if (newIndex == null) return errorJson("CANNOT_COMPUTE_SORT_INDEX", 400);
+
+      const updated = await prisma.project.update({
+        where: { id: draggedId },
+        data: { starSortIndex: newIndex },
+      });
+
+      const after = siblingsForSort
+        .map((s) => (s.id === draggedId ? { ...s, sortIndex: newIndex } : s))
+        .sort((a, b) => a.sortIndex - b.sortIndex);
+
+      if (needsRebalance(after)) {
+        const next = rebalance(after);
+        await prisma.$transaction(
+          next.map((s) =>
+            prisma.project.update({
+              where: { id: s.id },
+              data: { starSortIndex: s.sortIndex },
+            }),
+          ),
+        );
+        return okJson({ project: serializeProject(updated), rebalanced: true });
+      }
+      return okJson({ project: serializeProject(updated), rebalanced: false });
+    }
+
+    // ── 默认（分类内）排序分支 ──────────────────────────────────
     if (dragged.archived || target.archived) {
       return errorJson("ARCHIVED_NOT_SORTABLE", 400);
     }
@@ -63,14 +119,6 @@ export async function POST(req: Request) {
       .map((s) => (s.id === draggedId ? { ...s, sortIndex: newIndex } : s))
       .sort((a, b) => a.sortIndex - b.sortIndex);
 
-    const toDTO = (p: typeof updated): ProjectDTO => ({
-      id: p.id,
-      name: p.name,
-      archived: p.archived,
-      isDefault: p.isDefault,
-      categoryId: p.categoryId,
-    });
-
     if (needsRebalance(after)) {
       const next = rebalance(after);
       await prisma.$transaction(
@@ -81,10 +129,10 @@ export async function POST(req: Request) {
           }),
         ),
       );
-      return okJson({ project: toDTO(updated), rebalanced: true });
+      return okJson({ project: serializeProject(updated), rebalanced: true });
     }
 
-    return okJson({ project: toDTO(updated), rebalanced: false });
+    return okJson({ project: serializeProject(updated), rebalanced: false });
   } catch (e) {
     return handleError(e);
   }

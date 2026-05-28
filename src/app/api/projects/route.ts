@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser, requireAdmin } from "@/lib/session";
 import { handleError, okJson } from "@/lib/api";
 import { appendSortIndex } from "@/lib/sort-index";
+import { serializeProject } from "@/lib/serializers";
 import type { ProjectDTO } from "@/lib/types";
 
 const CreateInput = z.object({
@@ -17,13 +18,7 @@ export async function GET() {
     const projects = await prisma.project.findMany({
       orderBy: [{ archived: "asc" }, { sortIndex: "asc" }, { createdAt: "asc" }],
     });
-    const out: ProjectDTO[] = projects.map((p) => ({
-      id: p.id,
-      name: p.name,
-      archived: p.archived,
-      isDefault: p.isDefault,
-      categoryId: p.categoryId,
-    }));
+    const out: ProjectDTO[] = projects.map(serializeProject);
     return okJson(out);
   } catch (e) {
     return handleError(e);
@@ -62,16 +57,9 @@ export async function POST(req: Request) {
         sortIndex: appendSortIndex(activeSiblings),
       },
     });
-    return okJson(
-      {
-        id: project.id,
-        name: project.name,
-        archived: project.archived,
-        isDefault: project.isDefault,
-        categoryId: project.categoryId,
-      } satisfies ProjectDTO,
-      { status: 201 },
-    );
+    return okJson(serializeProject(project) satisfies ProjectDTO, {
+      status: 201,
+    });
   } catch (e) {
     return handleError(e);
   }

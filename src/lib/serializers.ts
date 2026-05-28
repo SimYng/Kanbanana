@@ -1,5 +1,5 @@
-import type { Prisma } from "@prisma/client";
-import type { TaskDTO, TaskStatus } from "./types";
+import type { Prisma, Project } from "@prisma/client";
+import type { ProjectDTO, TaskDTO, TaskStatus } from "./types";
 
 const taskInclude = {
   project: true,
@@ -12,6 +12,22 @@ export type TaskWithRelations = Prisma.TaskGetPayload<{
 }>;
 
 export const TASK_INCLUDE = taskInclude;
+
+/**
+ * 项目序列化的唯一出口。
+ * 任何把 Prisma Project（或同等形状的对象）转 ProjectDTO 的地方都应走这里，
+ * 避免再加字段时还要追着 10+ 处 inline 出口逐个补。
+ */
+export function serializeProject(p: Project): ProjectDTO {
+  return {
+    id: p.id,
+    name: p.name,
+    archived: p.archived,
+    isDefault: p.isDefault,
+    categoryId: p.categoryId,
+    starSortIndex: p.starSortIndex,
+  };
+}
 
 export function serializeTask(task: TaskWithRelations): TaskDTO {
   return {
@@ -32,13 +48,7 @@ export function serializeTask(task: TaskWithRelations): TaskDTO {
       url: l.url,
       title: l.title,
     })),
-    project: {
-      id: task.project.id,
-      name: task.project.name,
-      archived: task.project.archived,
-      isDefault: task.project.isDefault,
-      categoryId: task.project.categoryId,
-    },
+    project: serializeProject(task.project),
     assignee: task.assignee
       ? { id: task.assignee.id, name: task.assignee.name }
       : null,

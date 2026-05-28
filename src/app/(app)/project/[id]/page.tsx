@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
-import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
+import { TASK_INCLUDE, serializeProject, serializeTask } from "@/lib/serializers";
 import type { MemberDTO, ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
 import { ProjectBoard } from "./board";
 
@@ -37,13 +37,7 @@ export default async function ProjectPage({
 
   if (!project) notFound();
 
-  const projectDtos: ProjectDTO[] = projects.map((p) => ({
-    id: p.id,
-    name: p.name,
-    archived: p.archived,
-    isDefault: p.isDefault,
-    categoryId: p.categoryId,
-  }));
+  const projectDtos: ProjectDTO[] = projects.map(serializeProject);
 
   const categoryDtos: ProjectCategoryDTO[] = categoriesRaw.map((c) => ({
     id: c.id,
@@ -69,13 +63,7 @@ export default async function ProjectPage({
 
   return (
     <ProjectBoard
-      project={{
-        id: project.id,
-        name: project.name,
-        archived: project.archived,
-        isDefault: project.isDefault,
-        categoryId: project.categoryId,
-      }}
+      project={serializeProject(project)}
       projects={projectDtos}
       categories={categoryDtos}
       projectStats={projectStats}

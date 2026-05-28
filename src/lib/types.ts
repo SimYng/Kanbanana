@@ -25,13 +25,7 @@ export interface TaskDTO {
   /** 状态变为 done 时由 API 自动写入；切回非 done 时清空。 */
   completedAt: string | null;
   yuqueLinks: { id: string; url: string; title: string | null }[];
-  project: {
-    id: string;
-    name: string;
-    archived: boolean;
-    isDefault: boolean;
-    categoryId: string;
-  };
+  project: ProjectDTO;
   assignee: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +46,13 @@ export interface ProjectDTO {
   isDefault: boolean;
   /** 所属分类 id。所有项目都属于某个分类（默认为「未分类」）。 */
   categoryId: string;
+  /**
+   * 「重点项目」标记 + 顺序：
+   *  - null  → 未加星
+   *  - 非 null → 已加星，值是「重点项目区」内的浮点排序键
+   * UI 层用 `project.starSortIndex !== null` 判断是否加星。
+   */
+  starSortIndex: number | null;
 }
 
 export interface ProjectCategoryDTO {

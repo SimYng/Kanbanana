@@ -25,6 +25,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProjectActionsMenu } from "@/components/project-actions-menu";
+import { StarProjectButton } from "@/components/star-project-button";
 import { apiFetch } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import type { ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
@@ -46,6 +47,12 @@ interface ProjectGridProps {
   dimmed?: boolean;
   /** 分类列表，会传给编辑对话框做"移动到分类" */
   categories?: ProjectCategoryDTO[];
+  /**
+   * 拖拽作用域：
+   *  - "default"（默认）：分类内顺序，写 Project.sortIndex
+   *  - "starred"：顶部「重点项目区」内顺序，写 Project.starSortIndex
+   */
+  scope?: "default" | "starred";
 }
 
 /**
@@ -60,6 +67,7 @@ export function ProjectGrid({
   sortable,
   dimmed,
   categories,
+  scope = "default",
 }: ProjectGridProps) {
   const router = useRouter();
   const [list, setList] = useState(items);
@@ -102,7 +110,7 @@ export function ProjectGrid({
         rebalanced: boolean;
       }>("/api/projects/reorder", {
         method: "POST",
-        body: JSON.stringify({ draggedId, targetId, position }),
+        body: JSON.stringify({ draggedId, targetId, position, scope }),
       });
       // 一律 refresh：Next.js 14 的 router cache 默认缓存 RSC payload，
       // 不刷新的话切走再切回来会看到拖动前的旧顺序。
@@ -308,7 +316,7 @@ function ProjectCardShell({
           )}
         >
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 pr-10 text-base">
+            <CardTitle className="flex items-center gap-2 pr-16 text-base">
               <span className="truncate">{project.name}</span>
               {project.isDefault && (
                 <Badge
@@ -347,8 +355,13 @@ function ProjectCardShell({
         </Card>
       </Link>
       {dragHandle}
-      {isAdmin && (
-        <div className="absolute right-2 top-2">
+      <div className="absolute right-2 top-2 flex items-center gap-0.5">
+        <StarProjectButton
+          project={project}
+          isAdmin={isAdmin}
+          onUpdated={onUpdated}
+        />
+        {isAdmin && (
           <ProjectActionsMenu
             project={project}
             taskCount={total}
@@ -356,8 +369,8 @@ function ProjectCardShell({
             onUpdated={onUpdated}
             onDeleted={() => onDeleted(project.id)}
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

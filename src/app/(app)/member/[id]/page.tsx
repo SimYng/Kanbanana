@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
+import { TASK_INCLUDE, serializeProject, serializeTask } from "@/lib/serializers";
 import type { MemberDTO, ProjectCategoryDTO, ProjectDTO } from "@/lib/types";
 import { MemberWorkbench } from "./workbench";
 
@@ -39,13 +39,7 @@ export default async function MemberPage({
     role: m.role as MemberDTO["role"],
   }));
 
-  const projectDtos: ProjectDTO[] = projects.map((p) => ({
-    id: p.id,
-    name: p.name,
-    archived: p.archived,
-    isDefault: p.isDefault,
-    categoryId: p.categoryId,
-  }));
+  const projectDtos: ProjectDTO[] = projects.map(serializeProject);
 
   const categoryDtos: ProjectCategoryDTO[] = categoriesRaw.map((c) => ({
     id: c.id,

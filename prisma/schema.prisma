@@ -56,6 +56,11 @@ model Project {
   // 项目列表的展示顺序（浮点排序键），由 admin 拖拽维护，
   // 与任务的 sortIndex 同一套算法（lib/sort-index.ts）。
   sortIndex Float    @default(0)
+  /// 「重点项目」标记 + 顺序，用一个字段同时表达两层语义：
+  ///  - null  → 未加星
+  ///  - 非 null → 已加星，值就是在「重点项目区」内的浮点排序键
+  /// 重点区与普通区拖拽互不影响（各自独立的 sortIndex），实现简单。
+  starSortIndex Float?
   /// 所属分类。删除分类前必须先把项目迁走，DB 用 Restrict 兜底；
   /// API 层 DELETE 分类时会自动迁到默认分类后再删。
   categoryId String
