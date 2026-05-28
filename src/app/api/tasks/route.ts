@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { handleError, okJson } from "@/lib/api";
 import { serializeTask, TASK_INCLUDE } from "@/lib/serializers";
-import { appendSortIndex } from "@/lib/sort-index";
+import { prependSortIndex } from "@/lib/sort-index";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/types";
 
 const ListQuery = z.object({
@@ -64,13 +64,14 @@ export async function POST(req: Request) {
     const data = CreateInput.parse(json);
 
     const assigneeId = data.assigneeId ?? null;
-    const siblings = assigneeId
-      ? await prisma.task.findMany({
-          where: { assigneeId },
-          select: { id: true, sortIndex: true },
-          orderBy: { sortIndex: "asc" },
-        })
-      : [];
+    // sortIndex 是 assignee-scoped 全局键（跨状态共享，UI 内按 status 过滤），
+    // 新建任务排到"该负责人 / 未分配池"的最前面 → 列内自然落到顶部。
+    // assigneeId=null 也要查（之前空数组是个 bug，多个未分配新任务全 STEP 互相覆盖）。
+    const siblings = await prisma.task.findMany({
+      where: assigneeId ? { assigneeId } : { assigneeId: null },
+      select: { id: true, sortIndex: true },
+      orderBy: { sortIndex: "asc" },
+    });
 
     const task = await prisma.task.create({
       data: {
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
         assigneeId,
         creatorId: user.id,
         status: data.status,
-        sortIndex: appendSortIndex(siblings),
+        sortIndex: prependSortIndex(siblings),
         blockedReason: data.blockedReason,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         // 与 PATCH / reorder 一致：直接以 done 状态创建时自动写 completedAt，
