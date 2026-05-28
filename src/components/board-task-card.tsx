@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   CalendarClock,
   CheckCircle2,
-  CircleDot,
   GripVertical,
   PauseCircle,
   PlayCircle,
@@ -222,7 +221,8 @@ function CompactActions({
       ];
     }
     if (status === "blocked") {
-      return [{ value: "todo", label: "解除阻塞", Icon: CircleDot, tone: "text-info" }];
+      // 解除阻塞 → 回到 doing 继续做，而不是退回待办池（违反"继续做"的直觉）
+      return [{ value: "doing", label: "解除阻塞继续做", Icon: PlayCircle, tone: "text-info" }];
     }
     return [];
   })();
