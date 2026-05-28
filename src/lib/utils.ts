@@ -86,6 +86,36 @@ export function formatDueLabel(
   };
 }
 
+/**
+ * 把 completedAt 格式化为卡片小标签里的紧凑「完成时间」：
+ *  - 今天 → "今天 HH:mm"（带时分，方便看具体什么时候完成的）
+ *  - 昨天 → "昨天"
+ *  - 7 天内 → "N 天前"
+ *  - 同年 → "M月D日"
+ *  - 更早 → "yyyy/M/D"
+ *
+ * 与 formatDueLabel 的风格一致，但 tone 固定为 success（已完成）。
+ */
+export function formatCompletedLabel(
+  iso: string | null | undefined,
+): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.round((today.getTime() - day.getTime()) / 86_400_000);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  if (diff === 0) return `今天 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (diff === 1) return "昨天";
+  if (diff > 0 && diff <= 7) return `${diff} 天前`;
+  if (day.getFullYear() === today.getFullYear()) {
+    return `${day.getMonth() + 1}月${day.getDate()}日`;
+  }
+  return `${day.getFullYear()}/${day.getMonth() + 1}/${day.getDate()}`;
+}
+
 /** 判断 ISO 字符串或 Date 是否落在"今天"（本地时区）。 */
 export function isToday(input: string | Date | null | undefined): boolean {
   if (!input) return false;

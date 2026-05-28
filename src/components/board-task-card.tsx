@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProjectPill } from "@/components/project-pill";
-import { cn, formatDueLabel } from "@/lib/utils";
+import { cn, formatCompletedLabel, formatDueLabel } from "@/lib/utils";
 import type { TaskDTO, TaskStatus } from "@/lib/types";
 
 const DUE_TONE_CLASS = {
@@ -89,7 +89,10 @@ export function BoardTaskCard({
     transition,
   };
 
+  // 未完成任务 → 显示截止日期；已完成 → 替换为完成时间（done 没有"截止"语义了）
   const due = task.status === "done" ? null : formatDueLabel(task.dueDate);
+  const completedLabel =
+    task.status === "done" ? formatCompletedLabel(task.completedAt) : null;
   const hasYuque = task.yuqueLinks.length > 0;
   const hasBlockedReason = task.status === "blocked" && !!task.blockedReason;
   const hasMetaRow =
@@ -141,6 +144,15 @@ export function BoardTaskCard({
             >
               <CalendarClock className="h-3 w-3" />
               {due.label}
+            </span>
+          )}
+          {completedLabel && (
+            <span
+              className="inline-flex shrink-0 items-center gap-0.5 text-[11px] tabular-nums text-success"
+              title="完成时间"
+            >
+              <CheckCircle2 className="h-3 w-3" />
+              {completedLabel}
             </span>
           )}
         </div>
