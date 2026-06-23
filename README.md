@@ -43,13 +43,13 @@
 cp .env.example .env
 # 编辑 .env：
 #   NEXTAUTH_SECRET：必填，至少 32 位随机字符串
-#   NEXTAUTH_URL：你的访问地址（http://内网IP:3000 或 https://域名）
+#   NEXTAUTH_URL：你的访问地址（http://内网IP:2233 或 https://域名）
 #   ADMIN_EMAIL / ADMIN_PASSWORD：初始管理员账号
 
 # 2. 启动（首次会自动构建镜像 + 跑数据库迁移 + 写入种子数据）
 docker compose up -d
 
-# 3. 打开 http://localhost:3000，用 .env 里的管理员账号登录
+# 3. 打开 http://localhost:2233，用 .env 里的管理员账号登录
 ```
 
 启动后：
@@ -87,7 +87,7 @@ pnpm prisma:seed
 
 # 启动开发服务
 pnpm dev
-# 打开 http://localhost:3000
+# 打开 http://localhost:2233
 ```
 
 默认账号（来自 seed）：

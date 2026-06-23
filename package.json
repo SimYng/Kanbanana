@@ -4,9 +4,9 @@
   "description": "蕉办 Kanbanana — 一个有点不正经，但认真帮你管理任务的开源项目看板",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 2233",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "next start -p 2233",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",

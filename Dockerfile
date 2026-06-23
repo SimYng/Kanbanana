@@ -35,7 +35,7 @@ RUN npm run build
 FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
+ENV PORT=2233
 ENV HOSTNAME=0.0.0.0
 
 # Next standalone 输出
@@ -63,6 +63,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN mkdir -p /app/data && chown -R node:node /app
 USER node
 
-EXPOSE 3000
+EXPOSE 2233
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "server.js"]
