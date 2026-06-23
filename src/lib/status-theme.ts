@@ -38,11 +38,13 @@ export const STATUS_THEME: Record<
     title: "text-success",
     ring: "ring-success/60",
   },
-  // 已取消：中止 / 作废，视觉上要明显「弱化、退场」，所以用比 todo 更淡的灰，
+  // 已取消：中止 / 作废，视觉上要明显「弱化、退场」。
   // 不借用 destructive（红）——取消是主动决定，不是错误，红色会误导成报错。
+  // 与 todo 同属灰色系，但 dot 改成「空心圈」用形状区分（借鉴 Linear 的 canceled 图标），
+  // 避免和 todo 的实心灰点在小色点 / 图例里糊成一团。
   canceled: {
     top: "border-t-muted-foreground/25",
-    dot: "bg-muted-foreground/40",
+    dot: "border-[1.5px] border-muted-foreground/60 bg-transparent",
     title: "text-muted-foreground",
     ring: "ring-muted-foreground/40",
   },

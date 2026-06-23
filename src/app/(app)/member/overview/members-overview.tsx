@@ -45,7 +45,6 @@ const STATUS_ORDER: Record<TaskStatus, number> = {
   blocked: 1,
   todo: 2,
   done: 3,
-  // canceled 不在本页展示（见 visibleTasks 过滤），这里仅为满足 Record 完整性
   canceled: 4,
 };
 
@@ -80,11 +79,16 @@ export function MembersOverview({
     weekAgoStart.setDate(weekAgoStart.getDate() - 6);
 
     return tasks.filter(isTaskVisible).filter((t) => {
-      // 总览聚焦「谁在做什么 + 近期业绩」：已取消任务不展示，避免堆积噪音
-      if (t.status === "canceled") return false;
-      if (t.status !== "done") return true;
-      if (!t.completedAt) return false;
-      return new Date(t.completedAt) >= weekAgoStart;
+      // done / canceled 都是终态：只展示近 7 天的，避免历史堆积把列压垮
+      if (t.status === "done") {
+        if (!t.completedAt) return false;
+        return new Date(t.completedAt) >= weekAgoStart;
+      }
+      if (t.status === "canceled") {
+        if (!t.canceledAt) return false;
+        return new Date(t.canceledAt) >= weekAgoStart;
+      }
+      return true;
     });
   }, [tasks]);
 
@@ -379,7 +383,13 @@ export function MembersOverview({
 }
 
 // 列内任务渲染顺序，跟 STATUS_ORDER 一致；每段独立 DndContext，跨段不允许拖动
-const RENDER_STATUSES: TaskStatus[] = ["doing", "blocked", "todo", "done"];
+const RENDER_STATUSES: TaskStatus[] = [
+  "doing",
+  "blocked",
+  "todo",
+  "done",
+  "canceled",
+];
 
 interface OverviewColumnProps {
   title: string;
@@ -437,7 +447,7 @@ function OverviewColumn({
       blocked: [],
       todo: [],
       done: [],
-      canceled: [], // 本页不渲染（已在 visibleTasks 过滤），仅占位满足类型
+      canceled: [],
     };
     for (const t of tasks) buckets[t.status].push(t);
     // 入参 tasks 已按 STATUS_ORDER + sortIndex 排好，按 status 切片后组内顺序自然正确
@@ -479,6 +489,7 @@ function OverviewColumn({
           <StatusCount status="blocked" value={stats.blocked} />
           <StatusCount status="todo" value={stats.todo} />
           <StatusCount status="done" value={stats.done} />
+          <StatusCount status="canceled" value={stats.canceled} />
           <NewTaskDialog
             projects={projects.filter((p) => !p.archived)}
             members={members}
