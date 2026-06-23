@@ -82,7 +82,8 @@ model Task {
   assigneeId     String?
   creatorId      String
 
-  // "todo" | "doing" | "blocked" | "done"
+  // "todo" | "doing" | "blocked" | "done" | "canceled"
+  // done / canceled 都是「终态」：done = 做完了（算业绩），canceled = 不做了（中止，不算业绩）。
   status         String   @default("todo")
 
   // 个人执行顺序（浮点排序键）。拖拽时设为相邻两项的均值。
@@ -95,6 +96,9 @@ model Task {
   // 任务被切换为 done 状态时由 API 写入；切回非 done 时清空。
   // 不要依赖 updatedAt 判断"今日完成"——updatedAt 会被任何字段编辑触发。
   completedAt    DateTime?
+  // 任务被切换为 canceled（已取消）时由 API 写入；切回非 canceled 时清空。
+  // 与 completedAt 互斥：一个任务不会既完成又取消（API 切换时会清掉对方）。
+  canceledAt     DateTime?
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

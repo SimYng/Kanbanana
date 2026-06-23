@@ -80,7 +80,19 @@ src/lib/
 ## 4. 核心设计决策（带「为什么」）
 
 ### 状态驱动的成员工作台（**没有「今日聚焦」**）
-工作台按 `status` 分四区：进行中 / 待办 / 阻塞中 / 已完成。「今日聚焦」概念已废弃，但 `Task.focusedToday` 字段仍保留以兼容旧迁移和未来可能的需求——**不要再在 UI 引用它**。
+工作台按 `status` 分列：进行中 / 待办 / 阻塞中 / 近期已完成 / 已取消。「今日聚焦」概念已废弃，但 `Task.focusedToday` 字段仍保留以兼容旧迁移和未来可能的需求——**不要再在 UI 引用它**。
+
+### 任务状态：5 个，含两个「终态」
+`TaskStatus = todo | doing | blocked | done | canceled`（见 `src/lib/types.ts`，是 API zod 校验的唯一来源）。
+- **done（已完成）/ canceled（已取消）都是终态**：不再是手头活，不计入工作量 / 待办 / 截止前瞻统计。区别只在 done 算业绩、canceled 不算（对齐 Linear/Jira/GitHub 的「completed vs not planned」模型）。
+- 统计口径统一用 `isActiveStatus(status)`（= 非 done 非 canceled），**不要再散写 `status !== "done"`**——那样会把 canceled 误算进工作量。
+- `Task.completedAt` 与 `Task.canceledAt` 是**互斥**的终态时间戳，均由后端独占维护（见下条），前端不可显式传入。
+- **展示约定**：
+  - 成员工作台（member-kanban）：done → 「近期已完成」(按 completedAt 倒序 + 时间窗口筛选)，canceled → 「已取消」(按 canceledAt 倒序，全量)，两列都 `nonSortable` 且无内联操作，靠拖入 / 详情弹窗切换。
+  - 成员总览（/member/overview）：聚焦活跃 + 近期业绩，**canceled 任务完全不展示**（`visibleTasks` 直接过滤掉）。
+  - 项目看板（/project/[id]）：5 列全展示，是任务全生命周期视图；canceled 卡片提供「恢复继续做」内联按钮（→ doing）。
+  - 卡片（board-task-card）：canceled 标题加删除线 + 弱化，色条用最淡的灰（**不用 destructive 红**，取消是主动决定不是报错）。
+- **进度分母**：项目进度 / 项目卡 `total` 都把 canceled **移出范围**（既不算完成也不算待办，否则会拉低完成率）。
 
 ### sortIndex 浮点中点插入
 拖拽只更新被移动卡片的 `sortIndex = (prev + next) / 2`。约 50 次连续插入后精度告警，触发 `rebalance` 事务重排该作用域全部记录。算法见 `src/lib/sort-index.ts`，被 **任务** 和 **项目** 两套排序共用，未来再加其它实体排序也直接复用同一套工具。
@@ -121,10 +133,14 @@ src/lib/
 ### 阻塞必须带原因
 点击「阻塞」按钮**不直接**改 status，先弹 `BlockReasonDialog` 收集 `blockedReason`，提交时一并 PATCH。切到非 blocked 状态时**主动清空 blockedReason**，避免残留旧文案。参见 `workbench.tsx` 的 `handleAction`。
 
-### `completedAt` 由后端独占维护
-`Task.completedAt` 用来精确判断「今日完成」、「本周完成」等统计，**不要**用 `updatedAt` 替代（updatedAt 被任意字段编辑触发，会污染统计）。
-- API（`/api/tasks/[id]` PATCH）根据 status 切换**自动**维护：非 done → done 写入 `new Date()`，done → 非 done 清空
-- 前端 **不可** 在 PATCH body 里显式传 `completedAt`，Zod schema 也不接收该字段
+### `completedAt` / `canceledAt` 由后端独占维护
+`Task.completedAt` 用来精确判断「今日完成」、「本周完成」等统计，**不要**用 `updatedAt` 替代（updatedAt 被任意字段编辑触发，会污染统计）。`Task.canceledAt` 同理记录「取消时间」。两者**互斥**：一个任务不会既完成又取消。
+- API 三处入口（`/api/tasks` POST、`/api/tasks/[id]` PATCH、`/api/tasks/reorder`）根据 status「切换」**自动**维护，口径一致：
+  - 进入 done → 写 `completedAt = now`（并清 focusedToday）；离开 done → 清 `completedAt`
+  - 进入 canceled → 写 `canceledAt = now`；离开 canceled → 清 `canceledAt`
+  - done ↔ canceled 互转时，两个分支各自把对方时间戳清掉
+  - 只在 status **真正变化**时改，避免对已 done 任务再 PATCH done 时刷新掉原完成时间
+- 前端 **不可** 在 body 里显式传 `completedAt` / `canceledAt`，Zod schema 也不接收
 - 统计代码统一用 `isToday(t.completedAt)` 风格，参见 `team/page.tsx`、`workbench.tsx` 的 `doneToday`
 
 ### 截止时间是「日期」不是「时刻」

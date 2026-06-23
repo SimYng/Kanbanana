@@ -45,6 +45,8 @@ const STATUS_ORDER: Record<TaskStatus, number> = {
   blocked: 1,
   todo: 2,
   done: 3,
+  // canceled 不在本页展示（见 visibleTasks 过滤），这里仅为满足 Record 完整性
+  canceled: 4,
 };
 
 interface MembersOverviewProps {
@@ -78,6 +80,8 @@ export function MembersOverview({
     weekAgoStart.setDate(weekAgoStart.getDate() - 6);
 
     return tasks.filter(isTaskVisible).filter((t) => {
+      // 总览聚焦「谁在做什么 + 近期业绩」：已取消任务不展示，避免堆积噪音
+      if (t.status === "canceled") return false;
       if (t.status !== "done") return true;
       if (!t.completedAt) return false;
       return new Date(t.completedAt) >= weekAgoStart;
@@ -433,6 +437,7 @@ function OverviewColumn({
       blocked: [],
       todo: [],
       done: [],
+      canceled: [], // 本页不渲染（已在 visibleTasks 过滤），仅占位满足类型
     };
     for (const t of tasks) buckets[t.status].push(t);
     // 入参 tasks 已按 STATUS_ORDER + sortIndex 排好，按 status 切片后组内顺序自然正确
@@ -440,7 +445,13 @@ function OverviewColumn({
   }, [tasks]);
 
   const stats = useMemo(() => {
-    const s = { doing: 0, blocked: 0, todo: 0, done: 0 };
+    const s: Record<TaskStatus, number> = {
+      doing: 0,
+      blocked: 0,
+      todo: 0,
+      done: 0,
+      canceled: 0,
+    };
     for (const t of tasks) s[t.status] += 1;
     return s;
   }, [tasks]);

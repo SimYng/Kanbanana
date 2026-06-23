@@ -34,7 +34,16 @@ import { STATUS_THEME } from "@/lib/status-theme";
 import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
 import { STATUS_LABEL, type TaskDTO, type TaskStatus } from "@/lib/types";
 
-const KANBAN_STATUSES: TaskStatus[] = ["doing", "todo", "blocked", "done"];
+const KANBAN_STATUSES: TaskStatus[] = [
+  "doing",
+  "todo",
+  "blocked",
+  "done",
+  "canceled",
+];
+/** 终态列：不参与列内手动排序（按时间倒序展示），但仍可作为跨列拖入目标。 */
+const TERMINAL_COLUMNS: TaskStatus[] = ["done", "canceled"];
+const isTerminalColumn = (s: TaskStatus) => TERMINAL_COLUMNS.includes(s);
 const COLUMN_ID_PREFIX = "col:";
 const columnId = (s: TaskStatus) => `${COLUMN_ID_PREFIX}${s}`;
 const parseColumnId = (id: string): TaskStatus | null => {
@@ -125,10 +134,17 @@ export function MemberKanban({
           (t) => t.completedAt && new Date(t.completedAt) >= doneCutoff,
         );
         filtered.sort(
-          (a, b) =>
-            +new Date(b.completedAt!) - +new Date(a.completedAt!),
+          (a, b) => +new Date(b.completedAt!) - +new Date(a.completedAt!),
         );
         return { status, tasks: filtered };
+      }
+      if (status === "canceled") {
+        // 已取消全部展示（通常不多），按 canceledAt 倒序（最近取消在最前）
+        arr.sort(
+          (a, b) =>
+            +new Date(b.canceledAt ?? 0) - +new Date(a.canceledAt ?? 0),
+        );
+        return { status, tasks: arr };
       }
       arr.sort((a, b) => a.sortIndex - b.sortIndex);
       return { status, tasks: arr };
@@ -293,7 +309,7 @@ export function MemberKanban({
         setLocalTasks(tasks);
       }}
     >
-      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {columns.map((col) => (
           <KanbanColumn
             key={col.status}
@@ -303,8 +319,8 @@ export function MemberKanban({
               activeTask !== null && activeTask.status === col.status
             }
             onOpen={onOpen}
-            onAction={col.status === "done" ? undefined : onAction}
-            sortable={col.status !== "done"}
+            onAction={isTerminalColumn(col.status) ? undefined : onAction}
+            sortable={!isTerminalColumn(col.status)}
             headerExtra={
               col.status === "done" ? (
                 <Select
@@ -409,7 +425,11 @@ function KanbanColumn({
         >
           {tasks.length === 0 ? (
             <div className="rounded border border-dashed py-6 text-center text-xs text-muted-foreground">
-              {sortable ? "拖到这里" : "近期没有完成"}
+              {status === "done"
+                ? "近期没有完成"
+                : status === "canceled"
+                  ? "没有取消的任务"
+                  : "拖到这里"}
             </div>
           ) : (
             tasks.map((t) => (

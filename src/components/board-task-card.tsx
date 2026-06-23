@@ -5,16 +5,18 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
   AlertTriangle,
+  Ban,
   CalendarClock,
   CheckCircle2,
   GripVertical,
   PauseCircle,
   PlayCircle,
+  RotateCcw,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProjectPill } from "@/components/project-pill";
 import { cn, formatCompletedLabel, formatDueLabel } from "@/lib/utils";
-import type { TaskDTO, TaskStatus } from "@/lib/types";
+import { isActiveStatus, type TaskDTO, type TaskStatus } from "@/lib/types";
 
 const DUE_TONE_CLASS = {
   danger: "text-destructive",
@@ -34,6 +36,7 @@ const STATUS_BORDER: Record<TaskStatus, string> = {
   doing: "border-l-info",
   blocked: "border-l-warn",
   done: "border-l-success/60",
+  canceled: "border-l-muted-foreground/25",
 };
 
 type Action = { kind: "status"; value: TaskStatus };
@@ -88,10 +91,12 @@ export function BoardTaskCard({
     transition,
   };
 
-  // 未完成任务 → 显示截止日期；已完成 → 替换为完成时间（done 没有"截止"语义了）
-  const due = task.status === "done" ? null : formatDueLabel(task.dueDate);
+  // 活跃任务 → 显示截止日期；终态（done/canceled）没有"截止"语义，改为展示对应时间戳
+  const due = isActiveStatus(task.status) ? formatDueLabel(task.dueDate) : null;
   const completedLabel =
     task.status === "done" ? formatCompletedLabel(task.completedAt) : null;
+  const canceledLabel =
+    task.status === "canceled" ? formatCompletedLabel(task.canceledAt) : null;
   const hasYuque = task.yuqueLinks.length > 0;
   const hasBlockedReason = task.status === "blocked" && !!task.blockedReason;
   const hasMetaRow =
@@ -131,7 +136,13 @@ export function BoardTaskCard({
               {task.assignee.name}
             </span>
           )}
-          <span className="min-w-0 flex-1 truncate text-xs font-medium leading-snug">
+          <span
+            className={cn(
+              "min-w-0 flex-1 truncate text-xs font-medium leading-snug",
+              // 已取消：标题加删除线 + 弱化，一眼看出「这事不做了」
+              task.status === "canceled" && "text-muted-foreground line-through",
+            )}
+          >
             {task.title}
           </span>
           {due && (
@@ -152,6 +163,15 @@ export function BoardTaskCard({
             >
               <CheckCircle2 className="h-3 w-3" />
               {completedLabel}
+            </span>
+          )}
+          {canceledLabel && (
+            <span
+              className="inline-flex shrink-0 items-center gap-0.5 text-[11px] tabular-nums text-muted-foreground"
+              title="取消时间"
+            >
+              <Ban className="h-3 w-3" />
+              {canceledLabel}
             </span>
           )}
         </div>
@@ -209,20 +229,39 @@ function CompactActions({
   taskId: string;
   onAction: (taskId: string, action: Action) => void;
 }) {
+  // 「取消」按钮：所有活跃状态都能直接放弃（中止），tone 用 muted 避免误读成报错
+  const cancelBtn: CompactActionButton = {
+    value: "canceled",
+    label: "取消任务",
+    Icon: Ban,
+  };
   const buttons: CompactActionButton[] = (() => {
     if (status === "todo") {
-      return [{ value: "doing", label: "开始", Icon: PlayCircle, tone: "text-info" }];
+      return [
+        { value: "doing", label: "开始", Icon: PlayCircle, tone: "text-info" },
+        cancelBtn,
+      ];
     }
     if (status === "doing") {
       return [
         { value: "done", label: "完成", Icon: CheckCircle2, tone: "text-success" },
         { value: "blocked", label: "标记阻塞", Icon: AlertTriangle, tone: "text-warn" },
         { value: "todo", label: "暂停退回待办", Icon: PauseCircle },
+        cancelBtn,
       ];
     }
     if (status === "blocked") {
       // 解除阻塞 → 回到 doing 继续做，而不是退回待办池（违反"继续做"的直觉）
-      return [{ value: "doing", label: "解除阻塞继续做", Icon: PlayCircle, tone: "text-info" }];
+      return [
+        { value: "doing", label: "解除阻塞继续做", Icon: PlayCircle, tone: "text-info" },
+        cancelBtn,
+      ];
+    }
+    if (status === "canceled") {
+      // 已取消 → 一键恢复继续做（误取消的补救），回到 doing
+      return [
+        { value: "doing", label: "恢复继续做", Icon: RotateCcw, tone: "text-info" },
+      ];
     }
     return [];
   })();

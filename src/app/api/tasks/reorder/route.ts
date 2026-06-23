@@ -86,12 +86,16 @@ export async function POST(req: Request) {
     }
     if (newIndex == null) return errorJson("CANNOT_COMPUTE_SORT_INDEX", 400);
 
-    // 跨状态时同步维护 completedAt
+    // 跨状态时同步维护终态时间戳（completedAt / canceledAt），口径与 PATCH 一致
     const statusChanged = newStatus !== dragged.status;
-    const completedAtPatch: { completedAt?: Date | null } = {};
+    const terminalPatch: { completedAt?: Date | null; canceledAt?: Date | null } =
+      {};
     if (statusChanged) {
-      if (newStatus === "done") completedAtPatch.completedAt = new Date();
-      else if (dragged.status === "done") completedAtPatch.completedAt = null;
+      if (newStatus === "done") terminalPatch.completedAt = new Date();
+      else if (dragged.status === "done") terminalPatch.completedAt = null;
+
+      if (newStatus === "canceled") terminalPatch.canceledAt = new Date();
+      else if (dragged.status === "canceled") terminalPatch.canceledAt = null;
     }
 
     const updated = await prisma.task.update({
@@ -102,7 +106,7 @@ export async function POST(req: Request) {
           ? { assigneeId: scopeAssigneeId }
           : {}),
         ...(statusChanged ? { status: newStatus } : {}),
-        ...completedAtPatch,
+        ...terminalPatch,
       },
       include: TASK_INCLUDE,
     });

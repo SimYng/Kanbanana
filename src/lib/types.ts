@@ -1,14 +1,32 @@
-export type TaskStatus = "todo" | "doing" | "blocked" | "done";
+export type TaskStatus = "todo" | "doing" | "blocked" | "done" | "canceled";
 export type UserRole = "admin" | "member";
 
-export const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "blocked", "done"];
+export const TASK_STATUSES: TaskStatus[] = [
+  "todo",
+  "doing",
+  "blocked",
+  "done",
+  "canceled",
+];
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "待办",
   doing: "进行中",
   blocked: "阻塞",
   done: "已完成",
+  canceled: "已取消",
 };
+
+/**
+ * 「终态」：done（做完）/ canceled（不做了）。
+ * 都不再是手头活，不计入工作量 / 待办统计；区别只在 done 算业绩、canceled 不算。
+ */
+export const TERMINAL_STATUSES: TaskStatus[] = ["done", "canceled"];
+
+/** 是否「活跃 / 进行中」状态（非终态）—— 工作量、未完成数等统计的口径。 */
+export function isActiveStatus(status: TaskStatus): boolean {
+  return status !== "done" && status !== "canceled";
+}
 
 export interface TaskDTO {
   id: string;
@@ -24,6 +42,8 @@ export interface TaskDTO {
   dueDate: string | null;
   /** 状态变为 done 时由 API 自动写入；切回非 done 时清空。 */
   completedAt: string | null;
+  /** 状态变为 canceled 时由 API 自动写入；切回非 canceled 时清空。与 completedAt 互斥。 */
+  canceledAt: string | null;
   yuqueLinks: { id: string; url: string; title: string | null }[];
   project: ProjectDTO;
   assignee: { id: string; name: string } | null;

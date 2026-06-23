@@ -38,4 +38,12 @@ export const STATUS_THEME: Record<
     title: "text-success",
     ring: "ring-success/60",
   },
+  // 已取消：中止 / 作废，视觉上要明显「弱化、退场」，所以用比 todo 更淡的灰，
+  // 不借用 destructive（红）——取消是主动决定，不是错误，红色会误导成报错。
+  canceled: {
+    top: "border-t-muted-foreground/25",
+    dot: "bg-muted-foreground/40",
+    title: "text-muted-foreground",
+    ring: "ring-muted-foreground/40",
+  },
 };

@@ -297,7 +297,7 @@ export function ProjectBoard({
         </Card>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {columns.map((col) => {
           const theme = STATUS_THEME[col.status];
           return (

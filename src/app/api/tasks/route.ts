@@ -84,9 +84,10 @@ export async function POST(req: Request) {
         sortIndex: prependSortIndex(siblings),
         blockedReason: data.blockedReason,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        // 与 PATCH / reorder 一致：直接以 done 状态创建时自动写 completedAt，
-        // 否则团队总览「今日完成」统计会漏算
+        // 与 PATCH / reorder 一致：直接以终态创建时自动写对应时间戳。
+        // done → completedAt（否则「今日完成」统计漏算）；canceled → canceledAt。
         completedAt: data.status === "done" ? new Date() : null,
+        canceledAt: data.status === "canceled" ? new Date() : null,
         yuqueLinks: data.yuqueLinks?.length
           ? { create: data.yuqueLinks.map((url) => ({ url })) }
           : undefined,

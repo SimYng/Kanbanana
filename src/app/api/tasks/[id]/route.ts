@@ -30,10 +30,13 @@ export async function PATCH(
       updates.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     }
 
-    // completedAt 完全由后端基于 status 切换维护，前端不可显式传入。
-    // - 非 done → done：写入当前时间，同时取消今日聚焦
-    // - done → 非 done：清空，避免历史残留误导"今日完成"统计
-    // - 其它情况（status 未变、或同为非 done）：不动 completedAt
+    // completedAt / canceledAt 完全由后端基于 status「切换」维护，前端不可显式传入。
+    // 两者是互斥的终态时间戳：进入某终态写入 now，离开该终态清空。
+    //  - 进入 done：写 completedAt = now（并取消今日聚焦）
+    //  - 进入 canceled：写 canceledAt = now
+    //  - 离开 done / canceled：清空对应字段（避免历史残留污染统计）
+    //  - done ↔ canceled 互转时，两个分支会各自把对方清掉
+    // 只在 status 真正变化时处理：避免对已 done 任务再 PATCH done 时刷新掉原完成时间。
     if (data.status !== undefined) {
       const current = await prisma.task.findUnique({
         where: { id: params.id },
@@ -41,11 +44,19 @@ export async function PATCH(
       });
       if (!current) return errorJson("NOT_FOUND", 404);
 
-      if (data.status === "done" && current.status !== "done") {
-        updates.completedAt = new Date();
-        updates.focusedToday = false;
-      } else if (data.status !== "done" && current.status === "done") {
-        updates.completedAt = null;
+      if (data.status !== current.status) {
+        if (data.status === "done") {
+          updates.completedAt = new Date();
+          updates.focusedToday = false;
+        } else if (current.status === "done") {
+          updates.completedAt = null;
+        }
+
+        if (data.status === "canceled") {
+          updates.canceledAt = new Date();
+        } else if (current.status === "canceled") {
+          updates.canceledAt = null;
+        }
       }
     }
 

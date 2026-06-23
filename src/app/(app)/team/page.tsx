@@ -16,7 +16,7 @@ import { Sparkline } from "@/components/sparkline";
 import { TASK_INCLUDE, serializeTask } from "@/lib/serializers";
 import { getStatusSeries, upsertTodayStatusSnapshot } from "@/lib/snapshot";
 import { cn, formatDueLabel, isTaskVisible, isToday } from "@/lib/utils";
-import type { TaskDTO } from "@/lib/types";
+import { isActiveStatus, type TaskDTO } from "@/lib/types";
 import {
   ProjectProgressGrid,
   type ProjectProgressItem,
@@ -52,7 +52,8 @@ export default async function TeamPage() {
 
   const memberRows: MemberWorkloadRow[] = members.map((m) => {
     const mine = tasks.filter((t) => t.assigneeId === m.id);
-    const open = mine.filter((t) => t.status !== "done");
+    // 工作量只算「活跃」任务：done（已完成）/ canceled（已取消）都不再是手头活
+    const open = mine.filter((t) => isActiveStatus(t.status));
     const doneToday = mine.filter((t) => t.status === "done" && isToday(t.completedAt)).length;
     return {
       member: { id: m.id, name: m.name },
@@ -65,7 +66,8 @@ export default async function TeamPage() {
   });
 
   const blockedTasks = tasks.filter((t) => t.status === "blocked");
-  const openTasks = tasks.filter((t) => t.status !== "done");
+  // 活跃任务池：排除 done + canceled，作为全局工作量 / 截止前瞻的口径
+  const openTasks = tasks.filter((t) => isActiveStatus(t.status));
 
   // 全局工作量统计（顶部第一列用）
   const overall = {
@@ -149,7 +151,10 @@ export default async function TeamPage() {
 
   // 项目进度数据：保持 server 端 sortIndex 顺序作为"手动排序"默认值
   const projectProgressItems: ProjectProgressItem[] = projects.map((p) => {
-    const pt = tasks.filter((t) => t.projectId === p.id);
+    // 已取消任务移出范围：既不算完成、也不算待办，不该拉低 / 计入进度分母
+    const pt = tasks.filter(
+      (t) => t.projectId === p.id && t.status !== "canceled",
+    );
     const doneCount = pt.filter((t) => t.status === "done").length;
     const blockedCount = pt.filter((t) => t.status === "blocked").length;
     const totalCount = pt.length;

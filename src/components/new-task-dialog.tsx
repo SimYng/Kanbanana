@@ -325,7 +325,7 @@ export function NewTaskDialog({
             <div
               role="radiogroup"
               aria-label="任务状态"
-              className="grid grid-cols-4 gap-1 rounded-md border bg-muted/30 p-1"
+              className="grid grid-cols-5 gap-1 rounded-md border bg-muted/30 p-1"
             >
               {TASK_STATUSES.map((s) => {
                 const active = s === status;
@@ -338,7 +338,7 @@ export function NewTaskDialog({
                     aria-checked={active}
                     onClick={() => setStatus(s)}
                     className={cn(
-                      "relative h-9 rounded text-sm font-medium transition-colors",
+                      "relative h-9 whitespace-nowrap rounded text-xs font-medium transition-colors",
                       active
                         ? cn(
                             "bg-background shadow-sm ring-1 ring-border",
@@ -349,7 +349,7 @@ export function NewTaskDialog({
                   >
                     <span
                       className={cn(
-                        "mr-1.5 inline-block h-1.5 w-1.5 rounded-full align-middle",
+                        "mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle",
                         theme.dot,
                       )}
                     />

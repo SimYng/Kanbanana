@@ -36,14 +36,16 @@ export default async function ProjectsListPage() {
 
   const stats: ProjectGridItem[] = await Promise.all(
     projects.map(async (p) => {
-      const [done, blocked, doing] = await Promise.all([
+      const [done, blocked, doing, canceled] = await Promise.all([
         prisma.task.count({ where: { projectId: p.id, status: "done" } }),
         prisma.task.count({ where: { projectId: p.id, status: "blocked" } }),
         prisma.task.count({ where: { projectId: p.id, status: "doing" } }),
+        prisma.task.count({ where: { projectId: p.id, status: "canceled" } }),
       ]);
       return {
         project: serializeProject(p),
-        total: p._count.tasks,
+        // 已取消任务移出范围：不计入总数，避免拉低项目完成进度
+        total: p._count.tasks - canceled,
         done,
         doing,
         blocked,
