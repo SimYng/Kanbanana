@@ -38,8 +38,8 @@ export function NavBar() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
-      <div className="container flex h-14 items-center gap-6">
-        <Link href="/team" className="flex items-center gap-2">
+      <div className="container flex h-14 items-center gap-3 sm:gap-6">
+        <Link href="/team" className="flex shrink-0 items-center gap-2">
           <Image
             src="/brand/logo-mark.png"
             alt="蕉办 Kanbanana"
@@ -47,7 +47,8 @@ export function NavBar() {
             height={28}
             priority
           />
-          <span className="text-base font-semibold tracking-tight">
+          {/* 小屏只留品牌图标，文字让位给导航 tab */}
+          <span className="hidden text-base font-semibold tracking-tight sm:inline">
             蕉办
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               Kanbanana
@@ -55,7 +56,8 @@ export function NavBar() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1">
+        {/* 小屏：tab 只显示图标并可横滑兜底，避免一行挤爆；sm+ 显示文字 */}
+        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto">
           {visibleTabs.map((tab) => {
             const active =
               pathname === tab.href || pathname?.startsWith(`${tab.href}/`);
@@ -64,28 +66,30 @@ export function NavBar() {
               <Link
                 key={tab.href}
                 href={tab.href}
+                title={tab.label}
+                aria-label={tab.label}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors sm:px-3",
                   active
                     ? "bg-secondary text-foreground"
                     : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
-                {tab.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <ThemeToggle />
           {session?.user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 gap-2 px-2">
                   <MemberAvatar name={session.user.name ?? "?"} className="h-6 w-6" />
-                  <span className="text-sm">{session.user.name}</span>
+                  <span className="hidden text-sm sm:inline">{session.user.name}</span>
                   {session.user.role === "admin" && (
                     <span className="rounded border border-primary/50 bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-foreground">
                       管理员
