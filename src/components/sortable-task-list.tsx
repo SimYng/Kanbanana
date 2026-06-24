@@ -28,7 +28,7 @@ export interface SortableTaskListProps {
 }
 
 /**
- * 通用拖拽容器。任务卡片用 TaskCard / BoardTaskCard 等 useSortable 子组件渲染。
+ * 通用拖拽容器。任务卡片用 BoardTaskCard 等 useSortable 子组件渲染。
  *
  * dnd-kit 的 onDragEnd 给的是 source/destination index。
  * 这里转换为 (draggedId, targetId, position) 以匹配后端 reorder API。

@@ -7,7 +7,7 @@ import type { TaskStatus } from "./types";
  *  - title: 标题文字颜色
  *  - ring:  拖拽 hover 时给列卡的高亮 ring
  *
- * 与 task-card 的 statusBarClass 保持一致，避免风格漂移。
+ * 与 board-task-card 的 STATUS_BORDER（卡片左侧状态色条）保持一致，避免风格漂移。
  * 同时被项目看板 (project/board.tsx) 与成员工作台 (member/member-kanban.tsx) 复用。
  */
 export const STATUS_THEME: Record<
