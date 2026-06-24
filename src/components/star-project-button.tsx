@@ -78,7 +78,8 @@ export function StarProjectButton({
         "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-all",
         starred
           ? "text-primary"
-          : "text-muted-foreground/40 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          : // 触摸端没有 hover：<md 常驻露出（否则手机上 admin 无法加星）；md+ 维持 hover 才浮现
+            "text-muted-foreground/40 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
         isAdmin ? "hover:bg-muted hover:text-primary" : "cursor-default",
         className,
       )}
