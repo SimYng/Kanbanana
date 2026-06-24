@@ -249,8 +249,8 @@ export default async function TeamPage() {
           <p className="text-sm text-muted-foreground">
             所有阻塞中的任务集中展示，方便每日晨会快速过一遍
           </p>
-          <div className="overflow-hidden rounded-lg border">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full min-w-[36rem] text-sm">
               <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 font-medium">任务</th>
