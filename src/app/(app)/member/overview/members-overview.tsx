@@ -20,6 +20,7 @@ import {
 } from "@/components/member-switcher";
 import { apiFetch } from "@/lib/fetcher";
 import { cn, isTaskVisible } from "@/lib/utils";
+import { BOARD_COLUMN_FILL, BOARD_COLUMN_SCROLL } from "@/lib/board-layout";
 import { STATUS_THEME } from "@/lib/status-theme";
 import { useTaskStatusAction } from "@/lib/use-task-status-action";
 import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
@@ -296,7 +297,9 @@ export function MembersOverview({
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
+      {/* <md：成员列纵向堆叠 + 整页滚动（手机上「看某个人」更顺手，避免横滑窄列 + 嵌套滚动）；
+          md+：恢复横向并排 + 视口高度锁的对照视图。 */}
+      <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 md:flex-row md:overflow-x-auto md:pb-2">
         {members.length === 0 && grouped.unassigned.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
             还没有成员
@@ -467,7 +470,7 @@ function OverviewColumn({
   }, [tasks]);
 
   return (
-    <Card className="flex h-full min-h-0 w-[18rem] shrink-0 flex-col">
+    <Card className={cn("flex w-full flex-col md:w-[18rem] md:shrink-0", BOARD_COLUMN_FILL)}>
       <CardHeader className="flex shrink-0 flex-row items-center justify-between gap-2 space-y-0 border-b pb-3">
         <Link
           href={href}
@@ -512,7 +515,7 @@ function OverviewColumn({
         </div>
       </CardHeader>
 
-      <CardContent className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pt-2">
+      <CardContent className={cn("space-y-1.5 pt-2", BOARD_COLUMN_SCROLL)}>
         {tasks.length === 0 ? (
           <div className="rounded border border-dashed py-6 text-center text-xs text-muted-foreground">
             {emptyText}

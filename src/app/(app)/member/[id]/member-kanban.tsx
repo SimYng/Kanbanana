@@ -31,6 +31,11 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
+import {
+  BOARD_COLUMN_FILL,
+  BOARD_COLUMN_SCROLL,
+  BOARD_GRID,
+} from "@/lib/board-layout";
 import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
 import { STATUS_LABEL, type TaskDTO, type TaskStatus } from "@/lib/types";
 
@@ -309,7 +314,8 @@ export function MemberKanban({
         setLocalTasks(tasks);
       }}
     >
-      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {/* 响应式列布局见 lib/board-layout.ts */}
+      <div className={BOARD_GRID}>
         {columns.map((col) => (
           <KanbanColumn
             key={col.status}
@@ -394,7 +400,8 @@ function KanbanColumn({
     <Card
       ref={setNodeRef}
       className={cn(
-        "flex h-full min-h-0 flex-col border-t-4 transition-shadow",
+        "flex flex-col border-t-4 transition-shadow",
+        BOARD_COLUMN_FILL,
         theme.top,
         isOver && !isActiveColumn && cn("ring-2", theme.ring),
       )}
@@ -416,7 +423,7 @@ function KanbanColumn({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto pt-0">
+      <CardContent className={cn("space-y-2 pt-0", BOARD_COLUMN_SCROLL)}>
         <SortableContext
           // sortable=false 时 items 留空，dnd-kit 不把卡片纳入排序参与者，
           // 但 column 本身的 useDroppable 仍能接收跨列拖入。

@@ -17,6 +17,11 @@ import { ProjectActionsMenu } from "@/components/project-actions-menu";
 import { apiFetch } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import { STATUS_THEME } from "@/lib/status-theme";
+import {
+  BOARD_COLUMN_FILL,
+  BOARD_COLUMN_SCROLL,
+  BOARD_GRID,
+} from "@/lib/board-layout";
 import { computeOptimisticReorder } from "@/lib/optimistic-reorder";
 import {
   STATUS_LABEL,
@@ -297,11 +302,12 @@ export function ProjectBoard({
         </Card>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {/* 响应式列布局见 lib/board-layout.ts（<md 自然流，md+ 视口高度锁 + 列内滚动） */}
+      <div className={BOARD_GRID}>
         {columns.map((col) => {
           const theme = STATUS_THEME[col.status];
           return (
-          <Card key={col.status} className={cn("flex h-full min-h-0 flex-col border-t-4", theme.top)}>
+          <Card key={col.status} className={cn("flex flex-col border-t-4", BOARD_COLUMN_FILL, theme.top)}>
             <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className={cn("flex items-center gap-2 text-sm font-medium", theme.title)}>
                 <span className={cn("inline-block h-2 w-2 rounded-full", theme.dot)} />
@@ -311,7 +317,7 @@ export function ProjectBoard({
                 {col.tasks.length}
               </Badge>
             </CardHeader>
-            <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto pt-0">
+            <CardContent className={cn("space-y-2 pt-0", BOARD_COLUMN_SCROLL)}>
               {col.tasks.length === 0 ? (
                 <div className="rounded border border-dashed py-4 text-center text-xs text-muted-foreground">
                   —
