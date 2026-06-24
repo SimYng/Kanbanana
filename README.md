@@ -58,7 +58,7 @@ docker compose up -d
 - 数据库文件落在宿主机 `./data/kanbanana.db`，**备份直接 copy 这个文件即可**
 - 想清空示例数据：删掉 `./data/kanbanana.db` 后重启容器
 
-> **从 0.1.x（StackBoard 时期）升级**：容器 entrypoint 会自动把旧的 `data/stack-board.db` 重命名为 `data/kanbanana.db`，无需手动操作。
+> 若宿主机上仍留有旧数据库文件 `data/stack-board.db`，容器 entrypoint 会自动重命名为 `data/kanbanana.db`，无需手动操作。
 
 ### 升级 / 重新构建
 

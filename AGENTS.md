@@ -6,7 +6,7 @@
 
 ## 1. 项目快照
 
-**蕉办 Kanbanana**（包名 `kanbanana`，仓库历史早期叫 `stack-board`/StackBoard，已于 0.2.0 改名）。给 ≤ 10 人小团队的轻量项目管理工具。**单体 Next.js 14 App Router 应用**，前后端在同一仓库，Prisma + SQLite 落库，Docker Compose 一键部署。
+**蕉办 Kanbanana**（包名 `kanbanana`）。给 ≤ 10 人小团队的轻量项目管理工具。**单体 Next.js 14 App Router 应用**，前后端在同一仓库，Prisma + SQLite 落库，Docker Compose 一键部署。
 
 核心三视图：**团队总览（/team）→ 成员工作台（/member/[id]）→ 项目看板（/project/[id]）**。
 
