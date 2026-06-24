@@ -198,7 +198,9 @@ export function BoardTaskCard({
               </span>
             )}
             {onAction && (
-              <div className="ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              // 触摸端没有 hover：<md 常驻显示操作按钮（否则手机上无法改状态）；
+              // md+ 维持 hover 才露出的克制风格。
+              <div className="ml-auto opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
                 <CompactActions
                   status={task.status}
                   taskId={task.id}
@@ -277,7 +279,8 @@ function CompactActions({
           aria-label={label}
           title={label}
           className={cn(
-            "rounded p-0.5 hover:bg-accent",
+            // 移动端放大点击热区（p-1.5≈26px），md+ 收回紧凑间距
+            "rounded p-1.5 hover:bg-accent md:p-0.5",
             tone ?? "text-muted-foreground",
           )}
           onClick={(e) => {
