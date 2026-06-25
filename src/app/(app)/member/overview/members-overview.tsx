@@ -107,6 +107,14 @@ export function MembersOverview({
     const sortFn = (a: TaskDTO, b: TaskDTO) => {
       const so = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
       if (so !== 0) return so;
+      // 终态按时间戳倒序（最新在前），与成员工作台口径一致；
+      // 活跃任务仍按个人执行顺序 sortIndex 升序。
+      if (a.status === "done") {
+        return +new Date(b.completedAt ?? 0) - +new Date(a.completedAt ?? 0);
+      }
+      if (a.status === "canceled") {
+        return +new Date(b.canceledAt ?? 0) - +new Date(a.canceledAt ?? 0);
+      }
       return a.sortIndex - b.sortIndex;
     };
     for (const arr of byMember.values()) arr.sort(sortFn);
